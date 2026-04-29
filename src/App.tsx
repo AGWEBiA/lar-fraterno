@@ -13,6 +13,7 @@ import Biblioteca from "./pages/Biblioteca";
 import Leitor from "./pages/Leitor";
 import Agenda from "./pages/Agenda";
 import Perfil from "./pages/Perfil";
+import Revisao from "./pages/Revisao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/biblioteca/:slug" element={<Leitor />} />
               <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
               <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+              <Route path="/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

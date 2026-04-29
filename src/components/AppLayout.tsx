@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, Calendar, Home, LogOut, ScrollText, Sparkles, User } from "lucide-react";
+import { BookOpen, Calendar, Home, LogOut, ScrollText, ShieldCheck, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +59,9 @@ export const AppLayout = () => {
           <div className="flex items-center gap-2">
             {!loading && (user ? (
               <>
+                <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Revisão de capítulos">
+                  <Link to="/revisao"><ShieldCheck className="h-4 w-4 mr-1" /> Revisão</Link>
+                </Button>
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
                   <Link to="/perfil"><User className="h-4 w-4 mr-1" /> Perfil</Link>
                 </Button>
