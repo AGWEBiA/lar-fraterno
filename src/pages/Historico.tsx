@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { History, NotebookPen, Plus, Trash2, Users, X } from "lucide-react";
+import { History, NotebookPen, Plus, Trash2, Users, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -271,6 +271,11 @@ const Historico = () => {
                     )}
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/historico/${r.id}`}>
+                        <ExternalLink className="h-4 w-4" /> Detalhes
+                      </Link>
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => startEdit(r)}>
                       <NotebookPen className="h-4 w-4" /> Editar
                     </Button>

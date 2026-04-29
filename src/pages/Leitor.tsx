@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Bookmark, BookmarkCheck, Check, Loader2, MessageSquare, Pause, Play, Sparkles, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Check, Loader2, MessageSquare, Pause, Play, Sparkles, Square, Volume2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useItemProgress } from "@/hooks/useItemProgress";
 import { useChapterAudio } from "@/hooks/useChapterAudio";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,15 +21,35 @@ import { toast } from "sonner";
 const Leitor = () => {
   const { slug } = useParams();
   const { user } = useAuth();
+  const { isAdminMaster } = useUserRole();
   const tts = useSpeech();
   const chapter = slug ? chapterBySlug(slug) : null;
   const { rows, toggleRead, toggleBookmark, setNote } = useItemProgress(chapter?.slug);
   const [voiceId, setVoiceId] = useState<string>(() =>
     typeof window !== "undefined" ? localStorage.getItem("ttsVoiceId") || DEFAULT_VOICE_ID : DEFAULT_VOICE_ID,
   );
+  const [availableVoices, setAvailableVoices] = useState<Set<string>>(new Set());
   const audio = useChapterAudio(chapter, voiceId);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [draftNote, setDraftNote] = useState<Record<number, string>>({});
+
+  // Vozes que já têm áudio gerado para este capítulo (modo beta)
+  useEffect(() => {
+    if (!chapter) return;
+    supabase
+      .from("audio_cache")
+      .select("voice_id")
+      .eq("chapter_slug", chapter.slug)
+      .then(({ data }) => {
+        const set = new Set((data ?? []).map((r: any) => r.voice_id as string));
+        setAvailableVoices(set);
+        // Se a voz selecionada não está disponível e o usuário não é admin, troca para a primeira disponível
+        if (!isAdminMaster && set.size > 0 && !set.has(voiceId)) {
+          const first = Array.from(set)[0];
+          setVoiceId(first);
+        }
+      });
+  }, [chapter?.slug, isAdminMaster]);
 
   useEffect(() => {
     localStorage.setItem("ttsVoiceId", voiceId);
@@ -95,7 +116,7 @@ const Leitor = () => {
 
         <Card className="p-3 mb-8 flex flex-col gap-2 bg-card/80 border-border/50 shadow-soft sticky top-20 z-30">
           {/* Seletor de voz */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">
               Voz
             </span>
@@ -104,14 +125,26 @@ const Leitor = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {VOICES.map((v) => (
-                  <SelectItem key={v.id} value={v.id} className="text-xs">
-                    <span className="font-medium">{v.name}</span>{" "}
-                    <span className="text-muted-foreground">— {v.description}</span>
-                  </SelectItem>
-                ))}
+                {VOICES.map((v) => {
+                  const ready = availableVoices.has(v.id);
+                  const disabled = !isAdminMaster && !ready;
+                  return (
+                    <SelectItem key={v.id} value={v.id} className="text-xs" disabled={disabled}>
+                      <span className="font-medium">{v.name}</span>{" "}
+                      <span className="text-muted-foreground">— {v.description}</span>{" "}
+                      {ready ? (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">• pronto</span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">• indisponível</span>
+                      )}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            <span className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-0.5">
+              Áudio em beta
+            </span>
           </div>
 
           {/* Áudio em alta qualidade (ElevenLabs) */}
@@ -125,7 +158,7 @@ const Leitor = () => {
                 </span>
               )}
             </div>
-          ) : (
+          ) : isAdminMaster ? (
             <Button
               onClick={async () => {
                 await ensureNotificationPermission();
@@ -149,10 +182,15 @@ const Leitor = () => {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Gerar áudio em alta qualidade
+                  <Sparkles className="h-4 w-4" /> Gerar áudio em alta qualidade (admin)
                 </>
               )}
             </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Esta voz ainda não foi gerada. Use a leitura por voz do navegador abaixo, ou escolha uma voz marcada como "pronto".
+            </p>
           )}
           {audio.error && (
             <p className="text-xs text-destructive">Erro: {audio.error}</p>

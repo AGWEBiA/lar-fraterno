@@ -21,6 +21,7 @@ import { BatchGenerationPanel } from "@/components/admin/BatchGenerationPanel";
 import { TenantVoiceHistoryPanel } from "@/components/admin/TenantVoiceHistoryPanel";
 import { RetryFailedPanel } from "@/components/admin/RetryFailedPanel";
 import { MeetingsReportPanel } from "@/components/admin/MeetingsReportPanel";
+import { ContentManagementPanel } from "@/components/admin/ContentManagementPanel";
 import { UserEditDialog } from "@/components/admin/UserEditDialog";
 import { toast } from "sonner";
 
@@ -106,7 +107,7 @@ const Admin = () => {
         <TabsContent value="planning" className="mt-4"><CreditPlanningPanel /></TabsContent>
         <TabsContent value="voice-history" className="mt-4"><TenantVoiceHistoryPanel /></TabsContent>
         <TabsContent value="meetings" className="mt-4"><MeetingsReportPanel /></TabsContent>
-        <TabsContent value="content" className="mt-4"><ContentPanel /></TabsContent>
+        <TabsContent value="content" className="mt-4"><ContentManagementPanel /></TabsContent>
       </Tabs>
     </div>
   );
@@ -413,18 +414,6 @@ const VoicesPanel = () => {
   );
 };
 
-// =========================================================
-// CONTENT (placeholder leve com link à Revisão)
-// =========================================================
-const ContentPanel = () => (
-  <Card className="p-6">
-    <h3 className="font-medium mb-2">Gestão de conteúdo</h3>
-    <p className="text-sm text-muted-foreground mb-4">
-      Use a tela de <strong>Revisão</strong> para auditar capítulos e gerar áudios. Correções de conteúdo aplicadas
-      ficam disponíveis para todos os tenants.
-    </p>
-    <Button asChild variant="hero"><a href="/revisao">Abrir Revisão</a></Button>
-  </Card>
-);
+// (ContentPanel substituído por ContentManagementPanel)
 
 export default Admin;
