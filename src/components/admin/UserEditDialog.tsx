@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,18 +16,18 @@ interface Props {
 }
 
 export const UserEditDialog = ({ open, onOpenChange, user, onChanged }: Props) => {
-  const [fullName, setFullName] = useState(user?.full_name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
-  // sync quando abrir
-  useState(() => {
+  useEffect(() => {
     setFullName(user?.full_name ?? "");
     setEmail(user?.email ?? "");
     setPhone(user?.phone ?? "");
-  });
+    setDeleteConfirm("");
+  }, [user?.id]);
 
   const call = async (action: string, extra: Record<string, unknown> = {}) => {
     if (!user) return;
