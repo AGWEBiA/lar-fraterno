@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const VOICE_DEFAULT = "EXAVITQu4vr4xnSDxMaL"; // Sarah (PT-BR friendly)
 const MODEL_ID = "eleven_multilingual_v2";
-const MAX_CHARS = 4500; // por requisição (ElevenLabs limite ~5000)
+const MAX_CHARS = 4800; // por requisição (ElevenLabs limite ~5000)
 
 interface Body {
   slug: string;
@@ -123,14 +123,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2) gerar (com stitching para manter prosódia entre chunks)
+    // 2) gerar em paralelo (com stitching para manter prosódia entre chunks).
+    // Sequencial estourava o limite de 150s do edge runtime em capítulos longos.
     const chunks = splitForTTS(body.text);
-    const audios: Uint8Array[] = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const prev = i > 0 ? chunks[i - 1].slice(-300) : undefined;
-      const next = i < chunks.length - 1 ? chunks[i + 1].slice(0, 300) : undefined;
-      audios.push(await synth(chunks[i], voiceId, prev, next));
-    }
+    const audios = await Promise.all(
+      chunks.map((chunk, i) => {
+        const prev = i > 0 ? chunks[i - 1].slice(-300) : undefined;
+        const next = i < chunks.length - 1 ? chunks[i + 1].slice(0, 300) : undefined;
+        return synth(chunk, voiceId, prev, next);
+      }),
+    );
     const combined = concat(audios);
 
     // 3) upload no storage
