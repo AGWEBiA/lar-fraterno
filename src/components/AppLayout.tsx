@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, Calendar, History, Home, LogOut, ScrollText, ShieldCheck, Sparkles, User } from "lucide-react";
+import { BookOpen, Building2, Calendar, History, Home, LogOut, ScrollText, ShieldCheck, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useReminderScheduler } from "@/hooks/useReminderScheduler";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ const navItems = [
 
 export const AppLayout = () => {
   const { user, loading } = useAuth();
+  const { isAdminMaster } = useUserRole();
   const navigate = useNavigate();
   useReminderScheduler();
 
