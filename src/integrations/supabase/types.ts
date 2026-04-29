@@ -224,30 +224,57 @@ export type Database = {
       notification_preferences: {
         Row: {
           created_at: string
+          email_before: boolean
           email_enabled: boolean
+          email_end: boolean
+          email_start: boolean
           minutes_before: number
+          push_before: boolean
           push_enabled: boolean
+          push_end: boolean
+          push_start: boolean
           updated_at: string
           user_id: string
+          whatsapp_before: boolean
           whatsapp_enabled: boolean
+          whatsapp_end: boolean
+          whatsapp_start: boolean
         }
         Insert: {
           created_at?: string
+          email_before?: boolean
           email_enabled?: boolean
+          email_end?: boolean
+          email_start?: boolean
           minutes_before?: number
+          push_before?: boolean
           push_enabled?: boolean
+          push_end?: boolean
+          push_start?: boolean
           updated_at?: string
           user_id: string
+          whatsapp_before?: boolean
           whatsapp_enabled?: boolean
+          whatsapp_end?: boolean
+          whatsapp_start?: boolean
         }
         Update: {
           created_at?: string
+          email_before?: boolean
           email_enabled?: boolean
+          email_end?: boolean
+          email_start?: boolean
           minutes_before?: number
+          push_before?: boolean
           push_enabled?: boolean
+          push_end?: boolean
+          push_start?: boolean
           updated_at?: string
           user_id?: string
+          whatsapp_before?: boolean
           whatsapp_enabled?: boolean
+          whatsapp_end?: boolean
+          whatsapp_start?: boolean
         }
         Relationships: []
       }
