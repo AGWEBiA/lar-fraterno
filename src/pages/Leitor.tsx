@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { chapterBySlug, chapters } from "@/data/chapters";
 import { useSpeech } from "@/hooks/useSpeech";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useItemProgress } from "@/hooks/useItemProgress";
@@ -21,10 +21,20 @@ const Leitor = () => {
   const chapter = slug ? chapterBySlug(slug) : null;
   const { rows, toggleRead, toggleBookmark, setNote } = useItemProgress(chapter?.slug);
   const audio = useChapterAudio(chapter);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [draftNote, setDraftNote] = useState<Record<number, string>>({});
 
+  // Para qualquer áudio (TTS do navegador + player HQ) ao trocar de capítulo
+  // ou ao desmontar a página.
   useEffect(() => {
-    return () => tts.stop();
+    return () => {
+      tts.stop();
+      const el = audioRef.current;
+      if (el) {
+        el.pause();
+        el.currentTime = 0;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
@@ -78,7 +88,7 @@ const Leitor = () => {
           {audio.url ? (
             <div className="flex items-center gap-2 w-full">
               <Sparkles className="h-4 w-4 text-accent shrink-0" />
-              <audio controls src={audio.url} className="flex-1 h-9" preload="none" />
+              <audio ref={audioRef} controls src={audio.url} className="flex-1 h-9" preload="none" />
               {audio.cached && (
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   cache
