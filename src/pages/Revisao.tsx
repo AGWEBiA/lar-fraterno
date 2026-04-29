@@ -71,12 +71,16 @@ const Revisao = () => {
   const hasAudioForVoice = (slug: string, voiceId: string) =>
     audioCache.get(slug)?.has(voiceId) ?? false;
 
-  const generateAudio = async (slug: string, voiceId: string = batchVoiceId) => {
+  const generateAudio = async (
+    slug: string,
+    voiceId: string = batchVoiceId,
+    force = false,
+  ) => {
     const ch = chapterBySlug(slug);
     if (!ch) return false;
     const text = `${ch.title}. ${ch.paragraphs.join(" ")}`;
     const { data, error } = await supabase.functions.invoke("tts-chapter", {
-      body: { slug, text, voiceId },
+      body: { slug, text, voiceId, force },
     });
     if (error || data?.error) {
       toast.error(`Falha em ${ch.title}: ${data?.error ?? error?.message ?? "erro"}`);
