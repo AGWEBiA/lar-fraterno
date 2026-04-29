@@ -135,14 +135,13 @@ const Reuniao = () => {
     setParticipantInput("");
   };
 
-  const generateGuide = async () => {
+  const generateGuide = async (silent = false) => {
     if (!approved) {
-      toast.error("Aprove o capítulo na revisão antes de gerar o roteiro.");
+      if (!silent) toast.error("Aprove o capítulo na revisão antes de gerar o roteiro.");
       return;
     }
     setGenerating(true);
     try {
-      // Build a concise excerpt: first 3 numbered items, paraphrasable seed.
       const items = chapter.nodes.filter(
         (n): n is Extract<typeof chapter.nodes[number], { type: "item" }> => n.type === "item",
       );
@@ -153,7 +152,7 @@ const Reuniao = () => {
 
       const { data, error } = await supabase.functions.invoke("gerar-roteiro", {
         body: {
-          chapterSlug: chapter.slug,
+          chapterSlug: baseChapter.slug,
           chapterTitle: chapter.title,
           chapterSummary: chapter.summary,
           excerpt,
@@ -167,21 +166,30 @@ const Reuniao = () => {
         await supabase.from("meeting_guides").upsert(
           [{
             user_id: user.id,
-            chapter_slug: chapter.slug,
+            chapter_slug: baseChapter.slug,
             guide: generated as any,
             model: (data as any).model ?? null,
           }],
           { onConflict: "user_id,chapter_slug" },
         );
       }
-      toast.success("Roteiro gerado.");
+      if (!silent) toast.success("Roteiro gerado.");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Falha ao gerar roteiro.");
+      if (!silent) toast.error(e?.message ?? "Falha ao gerar roteiro.");
     } finally {
       setGenerating(false);
     }
   };
+
+  // Auto-generate the guide once when chapter is approved and no cached guide exists.
+  useEffect(() => {
+    if (autoTried) return;
+    if (!user || !approved || guide || generating) return;
+    setAutoTried(true);
+    generateGuide(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, approved, guide, generating, autoTried, baseChapter.slug]);
 
   // Decide what text to speak / show in each step.
   const stepContent = (() => {
