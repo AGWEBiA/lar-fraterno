@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSessionPlan, type SessionPlanRow } from "@/hooks/useSessionPlan";
 import { chapters } from "@/data/chapters";
 import { isLongChapter, suggestSessions } from "@/data/session-planner";
+import { TenantSchedulesSection } from "@/components/TenantSchedulesSection";
 import { toast } from "sonner";
 
 const DAYS = [
@@ -246,6 +247,8 @@ const Agenda = () => {
           </div>
         )}
       </Card>
+
+      <TenantSchedulesSection />
 
       {/* Plano de sessões */}
       <Card className="p-6 shadow-soft border-border/50 bg-card/90">

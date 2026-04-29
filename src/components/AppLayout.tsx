@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useReminderScheduler } from "@/hooks/useReminderScheduler";
+import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -66,9 +67,11 @@ export const AppLayout = () => {
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Histórico de reuniões">
                   <Link to="/historico"><History className="h-4 w-4 mr-1" /> Histórico</Link>
                 </Button>
-                <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Revisão de capítulos">
-                  <Link to="/revisao"><ShieldCheck className="h-4 w-4 mr-1" /> Revisão</Link>
-                </Button>
+                {isAdminMaster && (
+                  <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Revisão de capítulos">
+                    <Link to="/revisao"><ShieldCheck className="h-4 w-4 mr-1" /> Revisão</Link>
+                  </Button>
+                )}
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Meus grupos">
                   <Link to="/grupos"><Building2 className="h-4 w-4 mr-1" /> Grupos</Link>
                 </Button>
@@ -77,6 +80,7 @@ export const AppLayout = () => {
                     <Link to="/admin"><ShieldCheck className="h-4 w-4 mr-1" /> Admin</Link>
                   </Button>
                 )}
+                <NotificationBell />
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
                   <Link to="/perfil"><User className="h-4 w-4 mr-1" /> Perfil</Link>
                 </Button>

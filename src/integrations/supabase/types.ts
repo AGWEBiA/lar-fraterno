@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json | null
+          id: string
+          kind: string
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          kind: string
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          kind?: string
+          read?: boolean
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audio_cache: {
         Row: {
           chapter_slug: string
@@ -41,6 +74,54 @@ export type Database = {
           public_url?: string
           storage_path?: string
           voice_id?: string
+        }
+        Relationships: []
+      }
+      audio_generation_jobs: {
+        Row: {
+          batch_id: string | null
+          chapter_slug: string
+          characters: number
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          forced: boolean
+          id: string
+          status: string
+          user_id: string
+          voice_id: string
+          voice_label: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          chapter_slug: string
+          characters?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          forced?: boolean
+          id?: string
+          status?: string
+          user_id: string
+          voice_id: string
+          voice_label?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          chapter_slug?: string
+          characters?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          forced?: boolean
+          id?: string
+          status?: string
+          user_id?: string
+          voice_id?: string
+          voice_label?: string | null
         }
         Relationships: []
       }
@@ -455,6 +536,35 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_active_voice: {
+        Row: {
+          selected_at: string
+          selected_by: string
+          tenant_id: string
+          voice_id: string
+        }
+        Insert: {
+          selected_at?: string
+          selected_by: string
+          tenant_id: string
+          voice_id: string
+        }
+        Update: {
+          selected_at?: string
+          selected_by?: string
+          tenant_id?: string
+          voice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_active_voice_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_invites: {
         Row: {
           code: string
@@ -527,6 +637,88 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_schedules: {
+        Row: {
+          created_at: string
+          created_by: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          tenant_id: string
+          time_of_day: string
+          timezone: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          day_of_week: number
+          id?: string
+          is_active?: boolean
+          tenant_id: string
+          time_of_day: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          day_of_week?: number
+          id?: string
+          is_active?: boolean
+          tenant_id?: string
+          time_of_day?: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_schedules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_voice_selections: {
+        Row: {
+          id: string
+          selected_at: string
+          selected_by: string
+          tenant_id: string
+          voice_id: string
+          voice_label: string | null
+        }
+        Insert: {
+          id?: string
+          selected_at?: string
+          selected_by: string
+          tenant_id: string
+          voice_id: string
+          voice_label?: string | null
+        }
+        Update: {
+          id?: string
+          selected_at?: string
+          selected_by?: string
+          tenant_id?: string
+          voice_id?: string
+          voice_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_voice_selections_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Plus, Loader2, Copy, LogIn, Users } from "lucide-react";
+import { Building2, Plus, Loader2, Copy, LogIn, Users, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -155,11 +155,16 @@ const Tenants = () => {
                     {t.description && <p className="text-sm text-muted-foreground">{t.description}</p>}
                     {t.owner_id === user.id && <Badge variant="secondary" className="mt-2">Dono</Badge>}
                   </div>
-                  {t.owner_id === user.id && (
-                    <Button size="sm" variant="outline" onClick={() => createInvite(t.id)}>
-                      <Plus className="h-4 w-4 mr-1" />Novo convite
+                  <div className="flex flex-col gap-2 items-end">
+                    {t.owner_id === user.id && (
+                      <Button size="sm" variant="outline" onClick={() => createInvite(t.id)}>
+                        <Plus className="h-4 w-4 mr-1" />Novo convite
+                      </Button>
+                    )}
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to={`/grupos/${t.id}`}><Settings className="h-4 w-4 mr-1" />Gerenciar</Link>
                     </Button>
-                  )}
+                  </div>
                 </div>
                 {invites[t.id] && invites[t.id].length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border/50 space-y-1">

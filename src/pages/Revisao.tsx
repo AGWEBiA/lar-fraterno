@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,6 +17,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const Revisao = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { isAdminMaster, loading: roleLoading } = useUserRole();
+  if (authLoading || roleLoading) {
+    return <div className="container py-12 text-center"><Loader2 className="h-5 w-5 animate-spin inline" /></div>;
+  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!isAdminMaster) return <Navigate to="/" replace />;
+  return <RevisaoInner />;
+};
+
+const RevisaoInner = () => {
   const { user } = useAuth();
   const { isAdminMaster } = useUserRole();
   const audits = useMemo(() => auditAllChapters(), []);
@@ -77,12 +88,14 @@ const Revisao = () => {
     slug: string,
     voiceId: string = batchVoiceId,
     force = false,
+    batchId?: string,
   ) => {
     const ch = chapterBySlug(slug);
     if (!ch) return false;
     const text = `${ch.title}. ${ch.paragraphs.join(" ")}`;
+    const voiceLabel = voiceById(voiceId)?.name;
     const { data, error } = await supabase.functions.invoke("tts-chapter", {
-      body: { slug, text, voiceId, force },
+      body: { slug, text, voiceId, voiceLabel, force, batchId },
     });
     if (error || data?.error) {
       toast.error(`Falha em ${ch.title}: ${data?.error ?? error?.message ?? "erro"}`);
@@ -106,13 +119,24 @@ const Revisao = () => {
     }
     await ensureNotificationPermission();
     const voiceName = voiceById(batchVoiceId)?.name ?? "voz padrão";
+    const batchId = (typeof crypto !== "undefined" && "randomUUID" in crypto) ? crypto.randomUUID() : `${Date.now()}`;
     setBatch({ running: true, done: 0, total: pending.length, current: null });
+    // Notifica início do lote
+    supabase.functions.invoke("notify-batch", {
+      body: {
+        kind: "batch_started",
+        title: "Geração em lote iniciada",
+        body: `${pending.length} capítulo(s) na voz ${voiceName}.`,
+        data: { batchId, voiceId: batchVoiceId, total: pending.length },
+      },
+    }).catch(() => {});
+
     let okCount = 0;
     let failCount = 0;
     for (let i = 0; i < pending.length; i++) {
       const ch = pending[i];
       setBatch((b) => ({ ...b, current: ch.title, done: i }));
-      const ok = await generateAudio(ch.slug, batchVoiceId);
+      const ok = await generateAudio(ch.slug, batchVoiceId, false, batchId);
       if (ok) okCount++;
       else failCount++;
     }
@@ -122,6 +146,14 @@ const Revisao = () => {
       : `${okCount} capítulos gerados na voz ${voiceName}`;
     toast.success("Pré-geração concluída!", { description: summary });
     notifyDesktop("Pré-geração de áudio concluída", summary);
+    supabase.functions.invoke("notify-batch", {
+      body: {
+        kind: failCount > 0 ? "batch_failed" : "batch_finished",
+        title: failCount > 0 ? "Geração em lote terminou com falhas" : "Geração em lote concluída",
+        body: summary,
+        data: { batchId, voiceId: batchVoiceId, ok: okCount, failed: failCount },
+      },
+    }).catch(() => {});
   };
 
   const toggleApproval = async (slug: string, approved: boolean) => {
