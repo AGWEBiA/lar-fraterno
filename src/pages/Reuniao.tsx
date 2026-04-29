@@ -48,8 +48,6 @@ const Reuniao = () => {
   const [current, setCurrent] = useState(0);
   const [done, setDone] = useState<Set<string>>(new Set());
   const [chapterIdx, setChapterIdx] = useState(0);
-  const [guide, setGuide] = useState<MeetingGuide | null>(null);
-  const [generating, setGenerating] = useState(false);
   const tts = useSpeech();
   const [guide, setGuide] = useState<MeetingGuide | null>(null);
   const [generating, setGenerating] = useState(false);
