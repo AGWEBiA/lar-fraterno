@@ -73,31 +73,76 @@ const Leitor = () => {
         </h1>
         <p className="text-lg text-muted-foreground italic mb-8">{chapter.summary}</p>
 
-        <Card className="p-3 mb-8 flex flex-wrap gap-2 items-center bg-card/80 border-border/50 shadow-soft sticky top-20 z-30">
-          {!tts.speaking ? (
-            <Button onClick={read} variant="gold" size="sm" disabled={!tts.supported}>
-              <Volume2 className="h-4 w-4" /> Ouvir capítulo
-            </Button>
-          ) : !tts.paused ? (
-            <Button onClick={tts.pause} variant="outline" size="sm">
-              <Pause className="h-4 w-4" /> Pausar
-            </Button>
+        <Card className="p-3 mb-8 flex flex-col gap-2 bg-card/80 border-border/50 shadow-soft sticky top-20 z-30">
+          {/* Áudio em alta qualidade (ElevenLabs) */}
+          {audio.url ? (
+            <div className="flex items-center gap-2 w-full">
+              <Sparkles className="h-4 w-4 text-accent shrink-0" />
+              <audio controls src={audio.url} className="flex-1 h-9" preload="none" />
+              {audio.cached && (
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  cache
+                </span>
+              )}
+            </div>
           ) : (
-            <Button onClick={tts.resume} variant="gold" size="sm">
-              <Play className="h-4 w-4" /> Retomar
+            <Button
+              onClick={() => {
+                audio.generate();
+                toast.info("Gerando áudio em alta qualidade…", {
+                  description: "Pode levar até 1 minuto na primeira vez. Depois fica salvo.",
+                });
+              }}
+              variant="hero"
+              size="sm"
+              disabled={audio.loading}
+              className="w-full sm:w-auto"
+            >
+              {audio.loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Gerando áudio HQ…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" /> Gerar áudio em alta qualidade
+                </>
+              )}
             </Button>
           )}
-          {tts.speaking && (
-            <Button onClick={tts.stop} variant="ghost" size="sm">
-              <Square className="h-4 w-4" /> Parar
-            </Button>
+          {audio.error && (
+            <p className="text-xs text-destructive">Erro: {audio.error}</p>
           )}
-          {user && totalItems > 0 && (
-            <span className="text-xs text-muted-foreground ml-auto">
-              {readCount} / {totalItems} itens lidos
+
+          {/* Fallback: voz do navegador */}
+          <div className="flex flex-wrap gap-2 items-center pt-1 border-t border-border/40">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">
+              Voz do navegador (sem custo)
             </span>
-          )}
-          {!tts.supported && <span className="text-xs text-muted-foreground ml-2">Áudio indisponível neste navegador.</span>}
+            {!tts.speaking ? (
+              <Button onClick={read} variant="outline" size="sm" disabled={!tts.supported}>
+                <Volume2 className="h-4 w-4" /> Ouvir
+              </Button>
+            ) : !tts.paused ? (
+              <Button onClick={tts.pause} variant="outline" size="sm">
+                <Pause className="h-4 w-4" /> Pausar
+              </Button>
+            ) : (
+              <Button onClick={tts.resume} variant="outline" size="sm">
+                <Play className="h-4 w-4" /> Retomar
+              </Button>
+            )}
+            {tts.speaking && (
+              <Button onClick={tts.stop} variant="ghost" size="sm">
+                <Square className="h-4 w-4" /> Parar
+              </Button>
+            )}
+            {user && totalItems > 0 && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                {readCount} / {totalItems} itens lidos
+              </span>
+            )}
+          </div>
+          {!tts.supported && <span className="text-xs text-muted-foreground">Áudio do navegador indisponível.</span>}
         </Card>
 
         <div className="reading-prose">
