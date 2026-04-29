@@ -134,6 +134,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Gating: somente admin_master pode gerar/regerar áudio (custo de IA)
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Não autenticado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: isAdmin } = await supabaseAdmin.rpc("is_admin_master", { _user_id: userId });
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Apenas o administrador master pode gerar áudio. Selecione uma voz já gerada." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
     // 2) gerar com concorrência limitada (ElevenLabs: máx 3 simultâneas no plano atual; usamos 2 p/ margem).
     const chunks = splitForTTS(body.text);
     const CONCURRENCY = 2;
