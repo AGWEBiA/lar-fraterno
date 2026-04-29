@@ -61,7 +61,7 @@ const Reuniao = () => {
       .eq("chapter_slug", chapter.slug)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.guide) setGuide(data.guide as MeetingGuide);
+        if (data?.guide) setGuide(data.guide as unknown as MeetingGuide);
       });
   }, [chapter.slug, user]);
 
@@ -126,12 +126,12 @@ const Reuniao = () => {
       setGuide(generated);
       if (user) {
         await supabase.from("meeting_guides").upsert(
-          {
+          [{
             user_id: user.id,
             chapter_slug: chapter.slug,
-            guide: generated,
+            guide: generated as any,
             model: (data as any).model ?? null,
-          },
+          }],
           { onConflict: "user_id,chapter_slug" },
         );
       }
