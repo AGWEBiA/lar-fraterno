@@ -351,11 +351,6 @@ const Reuniao = () => {
                 )
               )}
 
-              {!stepContent && step.id !== "leitura" && (
-                <p className="text-sm text-muted-foreground italic">
-                  Gere o roteiro acima para ver sugestões personalizadas para este passo.
-                </p>
-              )}
 
               {!tts.supported && (
                 <p className="text-xs text-muted-foreground mt-3">Seu navegador não suporta leitura por voz.</p>
