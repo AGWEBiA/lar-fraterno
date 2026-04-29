@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShieldCheck, Users, Building2, Mic2, BookOpen, Loader2, Plus, Ban, CheckCircle2, Trash2 } from "lucide-react";
+import { ShieldCheck, Users, Building2, Mic2, BookOpen, Loader2, Plus, Ban, CheckCircle2, Trash2, Activity } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { useVoiceLibrary } from "@/hooks/useVoiceLibrary";
 import { supabase } from "@/integrations/supabase/client";
+import { GenerationsPanel } from "@/components/admin/GenerationsPanel";
 import { toast } from "sonner";
 
 interface UserRow {
@@ -70,16 +71,18 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" />Usuários</TabsTrigger>
           <TabsTrigger value="tenants"><Building2 className="h-4 w-4 mr-2" />Grupos</TabsTrigger>
           <TabsTrigger value="voices"><Mic2 className="h-4 w-4 mr-2" />Vozes</TabsTrigger>
+          <TabsTrigger value="generations"><Activity className="h-4 w-4 mr-2" />Gerações</TabsTrigger>
           <TabsTrigger value="content"><BookOpen className="h-4 w-4 mr-2" />Conteúdo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-4"><UsersPanel /></TabsContent>
         <TabsContent value="tenants" className="mt-4"><TenantsPanel /></TabsContent>
         <TabsContent value="voices" className="mt-4"><VoicesPanel /></TabsContent>
+        <TabsContent value="generations" className="mt-4"><GenerationsPanel /></TabsContent>
         <TabsContent value="content" className="mt-4"><ContentPanel /></TabsContent>
       </Tabs>
     </div>
