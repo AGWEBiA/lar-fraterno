@@ -16,6 +16,7 @@ interface Body {
   slug: string;
   text: string;
   voiceId?: string;
+  force?: boolean;
 }
 
 const supabaseAdmin = createClient(
@@ -100,17 +101,19 @@ Deno.serve(async (req) => {
     const voiceId = body.voiceId || VOICE_DEFAULT;
     const slug = body.slug;
 
-    // 1) cache hit?
-    const { data: existing } = await supabaseAdmin
-      .from("audio_cache")
-      .select("public_url")
-      .eq("chapter_slug", slug)
-      .eq("voice_id", voiceId)
-      .maybeSingle();
-    if (existing?.public_url) {
-      return new Response(JSON.stringify({ url: existing.public_url, cached: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // 1) cache hit? (exceto se force=true → regerar e sobrescrever)
+    if (!body.force) {
+      const { data: existing } = await supabaseAdmin
+        .from("audio_cache")
+        .select("public_url")
+        .eq("chapter_slug", slug)
+        .eq("voice_id", voiceId)
+        .maybeSingle();
+      if (existing?.public_url) {
+        return new Response(JSON.stringify({ url: existing.public_url, cached: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (!body.text || body.text.length < 10) {

@@ -34,31 +34,38 @@ export const useChapterAudio = (
       });
   }, [chapter?.slug, voiceId]);
 
-  const generate = useCallback(async () => {
-    if (!chapter) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const text = `${chapter.title}. ${chapter.paragraphs.join(" ")}`;
-      const { data, error: fnErr } = await supabase.functions.invoke("tts-chapter", {
-        body: { slug: chapter.slug, text, voiceId },
-      });
-      if (fnErr) throw fnErr;
-      if (data?.error) throw new Error(data.error);
-      setUrl(data.url);
-      setCached(!!data.cached);
-      // Notificação do sistema (útil quando a aba está em segundo plano)
-      const voiceName = voiceById(voiceId)?.name ?? "voz padrão";
-      notifyDesktop(
-        "Áudio HQ pronto",
-        `${chapter.title} — voz ${voiceName}. Já pode ouvir.`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [chapter, voiceId]);
+  const generate = useCallback(
+    async (opts?: { force?: boolean }) => {
+      if (!chapter) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const text = `${chapter.title}. ${chapter.paragraphs.join(" ")}`;
+        const { data, error: fnErr } = await supabase.functions.invoke("tts-chapter", {
+          body: { slug: chapter.slug, text, voiceId, force: opts?.force === true },
+        });
+        if (fnErr) throw fnErr;
+        if (data?.error) throw new Error(data.error);
+        // Quebra cache do <audio> quando regerar (mesma URL pública)
+        const finalUrl =
+          opts?.force && data.url ? `${data.url}?v=${Date.now()}` : data.url;
+        setUrl(finalUrl);
+        setCached(!!data.cached);
+        const voiceName = voiceById(voiceId)?.name ?? "voz padrão";
+        notifyDesktop(
+          opts?.force ? "Áudio HQ regerado" : "Áudio HQ pronto",
+          `${chapter.title} — voz ${voiceName}. Já pode ouvir.`,
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [chapter, voiceId],
+  );
 
-  return { url, loading, error, cached, generate };
+  const regenerate = useCallback(() => generate({ force: true }), [generate]);
+
+  return { url, loading, error, cached, generate, regenerate };
 };

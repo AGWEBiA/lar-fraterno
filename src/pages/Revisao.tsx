@@ -71,12 +71,16 @@ const Revisao = () => {
   const hasAudioForVoice = (slug: string, voiceId: string) =>
     audioCache.get(slug)?.has(voiceId) ?? false;
 
-  const generateAudio = async (slug: string, voiceId: string = batchVoiceId) => {
+  const generateAudio = async (
+    slug: string,
+    voiceId: string = batchVoiceId,
+    force = false,
+  ) => {
     const ch = chapterBySlug(slug);
     if (!ch) return false;
     const text = `${ch.title}. ${ch.paragraphs.join(" ")}`;
     const { data, error } = await supabase.functions.invoke("tts-chapter", {
-      body: { slug, text, voiceId },
+      body: { slug, text, voiceId, force },
     });
     if (error || data?.error) {
       toast.error(`Falha em ${ch.title}: ${data?.error ?? error?.message ?? "erro"}`);
@@ -255,7 +259,7 @@ const Revisao = () => {
             availableVoices={audioCache.get(a.slug) ?? new Set()}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
-            onGenerateAudio={(voiceId) => generateAudio(a.slug, voiceId)}
+            onGenerateAudio={(voiceId, force) => generateAudio(a.slug, voiceId, force)}
           />
         ))}
       </div>
@@ -271,7 +275,7 @@ interface RowProps {
   availableVoices: Set<string>;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
-  onGenerateAudio: (voiceId: string) => Promise<boolean> | void;
+  onGenerateAudio: (voiceId: string, force?: boolean) => Promise<boolean> | void;
 }
 
 const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
@@ -281,13 +285,14 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggle
   const hasAudio = availableVoices.size > 0;
   const hasAudioForRowVoice = availableVoices.has(rowVoiceId);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (force = false) => {
     setGeneratingAudio(true);
     await ensureNotificationPermission();
-    await onGenerateAudio(rowVoiceId);
+    await onGenerateAudio(rowVoiceId, force);
     const voiceName = voiceById(rowVoiceId)?.name ?? "voz padrão";
-    toast.success(`Áudio HQ pronto: ${audit.title}`, { description: `Voz ${voiceName}` });
-    notifyDesktop("Áudio HQ pronto", `${audit.title} — voz ${voiceName}`);
+    const label = force ? "Áudio HQ regerado" : "Áudio HQ pronto";
+    toast.success(`${label}: ${audit.title}`, { description: `Voz ${voiceName}` });
+    notifyDesktop(label, `${audit.title} — voz ${voiceName}`);
     setGeneratingAudio(false);
   };
 
@@ -426,7 +431,7 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggle
                 variant="outline"
                 size="sm"
                 disabled={generatingAudio || hasAudioForRowVoice}
-                onClick={handleGenerate}
+                onClick={() => handleGenerate(false)}
                 title={hasAudioForRowVoice ? "Já existe áudio gerado nesta voz" : "Gerar áudio nesta voz"}
               >
                 {generatingAudio ? (
@@ -437,6 +442,21 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggle
                   <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
                 )}
               </Button>
+              {hasAudioForRowVoice && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={generatingAudio}
+                  onClick={() => handleGenerate(true)}
+                  title="Regerar áudio (substitui o cache atual)"
+                >
+                  {generatingAudio ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <><Sparkles className="h-4 w-4" /> Regerar</>
+                  )}
+                </Button>
+              )}
             </div>
             {chapter && (
               <span className="text-xs text-muted-foreground self-center ml-auto">
