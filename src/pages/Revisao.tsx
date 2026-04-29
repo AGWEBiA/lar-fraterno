@@ -268,19 +268,26 @@ interface RowProps {
   approved: boolean;
   disabled: boolean;
   isOpen: boolean;
-  hasAudio: boolean;
+  availableVoices: Set<string>;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
-  onGenerateAudio: () => Promise<boolean> | void;
+  onGenerateAudio: (voiceId: string) => Promise<boolean> | void;
 }
 
-const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
+const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
   const chapter = chapterBySlug(audit.slug);
   const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [rowVoiceId, setRowVoiceId] = useState<string>(DEFAULT_VOICE_ID);
+  const hasAudio = availableVoices.size > 0;
+  const hasAudioForRowVoice = availableVoices.has(rowVoiceId);
 
   const handleGenerate = async () => {
     setGeneratingAudio(true);
-    await onGenerateAudio();
+    await ensureNotificationPermission();
+    await onGenerateAudio(rowVoiceId);
+    const voiceName = voiceById(rowVoiceId)?.name ?? "voz padrão";
+    toast.success(`Áudio HQ pronto: ${audit.title}`, { description: `Voz ${voiceName}` });
+    notifyDesktop("Áudio HQ pronto", `${audit.title} — voz ${voiceName}`);
     setGeneratingAudio(false);
   };
 
