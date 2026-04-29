@@ -21,15 +21,35 @@ import { toast } from "sonner";
 const Leitor = () => {
   const { slug } = useParams();
   const { user } = useAuth();
+  const { isAdminMaster } = useUserRole();
   const tts = useSpeech();
   const chapter = slug ? chapterBySlug(slug) : null;
   const { rows, toggleRead, toggleBookmark, setNote } = useItemProgress(chapter?.slug);
   const [voiceId, setVoiceId] = useState<string>(() =>
     typeof window !== "undefined" ? localStorage.getItem("ttsVoiceId") || DEFAULT_VOICE_ID : DEFAULT_VOICE_ID,
   );
+  const [availableVoices, setAvailableVoices] = useState<Set<string>>(new Set());
   const audio = useChapterAudio(chapter, voiceId);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [draftNote, setDraftNote] = useState<Record<number, string>>({});
+
+  // Vozes que já têm áudio gerado para este capítulo (modo beta)
+  useEffect(() => {
+    if (!chapter) return;
+    supabase
+      .from("audio_cache")
+      .select("voice_id")
+      .eq("chapter_slug", chapter.slug)
+      .then(({ data }) => {
+        const set = new Set((data ?? []).map((r: any) => r.voice_id as string));
+        setAvailableVoices(set);
+        // Se a voz selecionada não está disponível e o usuário não é admin, troca para a primeira disponível
+        if (!isAdminMaster && set.size > 0 && !set.has(voiceId)) {
+          const first = Array.from(set)[0];
+          setVoiceId(first);
+        }
+      });
+  }, [chapter?.slug, isAdminMaster]);
 
   useEffect(() => {
     localStorage.setItem("ttsVoiceId", voiceId);
