@@ -1,8 +1,9 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, Calendar, Home, LogOut, ScrollText, ShieldCheck, Sparkles, User } from "lucide-react";
+import { BookOpen, Calendar, History, Home, LogOut, ScrollText, ShieldCheck, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useReminderScheduler } from "@/hooks/useReminderScheduler";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
 export const AppLayout = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  useReminderScheduler();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -59,6 +61,9 @@ export const AppLayout = () => {
           <div className="flex items-center gap-2">
             {!loading && (user ? (
               <>
+                <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Histórico de reuniões">
+                  <Link to="/historico"><History className="h-4 w-4 mr-1" /> Histórico</Link>
+                </Button>
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Revisão de capítulos">
                   <Link to="/revisao"><ShieldCheck className="h-4 w-4 mr-1" /> Revisão</Link>
                 </Button>
