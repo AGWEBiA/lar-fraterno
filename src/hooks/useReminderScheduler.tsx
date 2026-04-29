@@ -139,13 +139,19 @@ export const useReminderScheduler = () => {
     let cancelled = false;
 
     const refreshPlan = async () => {
-      const [s, p] = await Promise.all([
+      const [s, p, sp] = await Promise.all([
         supabase.from("schedules").select("*").eq("user_id", user.id),
         supabase
           .from("notification_preferences")
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle(),
+        supabase
+          .from("session_plan")
+          .select("id, chapter_slug, session_index, scheduled_for, completed")
+          .eq("user_id", user.id)
+          .eq("completed", false)
+          .not("scheduled_for", "is", null),
       ]);
       if (cancelled) return;
       const prefs: Prefs =
@@ -162,7 +168,56 @@ export const useReminderScheduler = () => {
         planRef.current = [];
         return;
       }
-      planRef.current = buildPlanned((s.data as Schedule[]) ?? [], prefs);
+      const fromSchedules = buildPlanned((s.data as Schedule[]) ?? [], prefs);
+
+      const now = Date.now();
+      const fromSessions: PlannedReminder[] = [];
+      for (const row of (sp.data as Array<{
+        id: string;
+        chapter_slug: string;
+        session_index: number;
+        scheduled_for: string;
+      }>) ?? []) {
+        const start = new Date(row.scheduled_for).getTime();
+        if (start - now > MAX_HORIZON_MS) continue;
+        const before = start - prefs.minutes_before * 60_000;
+        const end = start + SESSION_DURATION_MIN * 60_000;
+        const title = `Reunião — ${row.chapter_slug.replace("capitulo-", "Cap. ")}`;
+        if (prefs.push_before && before > now)
+          fromSessions.push({
+            scheduleId: `sess-${row.id}`,
+            stage: "before",
+            fireAt: before,
+            title: "Sua reunião começa em breve",
+            body: `${title} (sessão ${row.session_index}) em ${prefs.minutes_before} min.`,
+          });
+        if (prefs.push_start && start > now)
+          fromSessions.push({
+            scheduleId: `sess-${row.id}`,
+            stage: "start",
+            fireAt: start,
+            title: "Está na hora ✨",
+            body: `${title} — sessão ${row.session_index}.`,
+          });
+        if (prefs.push_end && end > now)
+          fromSessions.push({
+            scheduleId: `sess-${row.id}`,
+            stage: "end",
+            fireAt: end,
+            title: "Reunião encerrada",
+            body: "Que a paz desta reunião permaneça em seu lar.",
+          });
+      }
+
+      // Dedup: se sessão coincide com schedule recorrente no mesmo horário, mantém só uma.
+      const seen = new Set<string>();
+      const merged = [...fromSchedules, ...fromSessions].filter((r) => {
+        const k = `${r.stage}|${r.fireAt}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      planRef.current = merged;
     };
 
     refreshPlan();
