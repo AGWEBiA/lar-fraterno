@@ -489,6 +489,72 @@ const Reuniao = () => {
           </div>
         </Card>
       </div>
+
+      <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-primary">Registrar esta reunião</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Título (opcional)</Label>
+              <Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} />
+            </div>
+            <div>
+              <Label>Participantes</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder="Nome do participante"
+                  value={participantInput}
+                  onChange={(e) => setParticipantInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addParticipant();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={addParticipant}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {participants.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {participants.map((p) => (
+                    <Badge key={p} variant="outline" className="border-accent/40 gap-1 pr-1">
+                      {p}
+                      <button
+                        type="button"
+                        onClick={() => setParticipants(participants.filter((x) => x !== p))}
+                        className="hover:bg-destructive/10 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Notas pessoais</Label>
+              <Textarea
+                rows={4}
+                placeholder="O que tocou a família, pedidos, reflexões..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFinishOpen(false)}>
+              Pular
+            </Button>
+            <Button variant="hero" onClick={saveMeeting}>
+              <CheckCircle2 className="h-4 w-4" /> Salvar no histórico
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
