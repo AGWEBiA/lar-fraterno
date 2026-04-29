@@ -283,12 +283,13 @@ interface RowProps {
   disabled: boolean;
   isOpen: boolean;
   availableVoices: Set<string>;
+  canGenerate: boolean;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
   onGenerateAudio: (voiceId: string, force?: boolean) => Promise<boolean> | void;
 }
 
-const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
+const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, canGenerate, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
   const chapter = chapterBySlug(audit.slug);
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [rowVoiceId, setRowVoiceId] = useState<string>(DEFAULT_VOICE_ID);
