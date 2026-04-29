@@ -155,36 +155,6 @@ export type Database = {
         }
         Relationships: []
       }
-      meeting_guides: {
-        Row: {
-          chapter_slug: string
-          created_at: string
-          guide: Json
-          id: string
-          model: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          chapter_slug: string
-          created_at?: string
-          guide: Json
-          id?: string
-          model?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          chapter_slug?: string
-          created_at?: string
-          guide?: Json
-          id?: string
-          model?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       meeting_history: {
         Row: {
           chapter_slug: string | null
