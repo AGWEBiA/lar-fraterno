@@ -8,18 +8,25 @@ import {
   Loader2,
   Pause,
   Play,
+  Plus,
   ShieldAlert,
   Sparkles,
   Square,
   Volume2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { meetingSteps } from "@/data/meeting-steps";
 import { chapters } from "@/data/chapters";
 import { useSpeech } from "@/hooks/useSpeech";
+import { useChapterEdits } from "@/hooks/useChapterOverrides";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,26 +51,38 @@ const Reuniao = () => {
   const [guide, setGuide] = useState<MeetingGuide | null>(null);
   const [generating, setGenerating] = useState(false);
   const tts = useSpeech();
+  const [guide, setGuide] = useState<MeetingGuide | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [autoTried, setAutoTried] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [participantInput, setParticipantInput] = useState("");
+  const [notes, setNotes] = useState("");
+  const [meetingTitle, setMeetingTitle] = useState("");
+
+  const baseChapter = chapters[chapterIdx];
+  const { chapter: editedChapter } = useChapterEdits(baseChapter.slug);
+  const chapter = editedChapter ?? baseChapter;
+  const approved = isApproved(baseChapter.slug);
 
   const progress = (done.size / meetingSteps.length) * 100;
   const step = meetingSteps[current];
-  const chapter = chapters[chapterIdx];
-  const approved = isApproved(chapter.slug);
 
   // Reset cached guide when chapter changes; load from DB if exists.
   useEffect(() => {
     setGuide(null);
+    setAutoTried(false);
     if (!user) return;
     supabase
       .from("meeting_guides")
       .select("guide")
       .eq("user_id", user.id)
-      .eq("chapter_slug", chapter.slug)
+      .eq("chapter_slug", baseChapter.slug)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.guide) setGuide(data.guide as unknown as MeetingGuide);
       });
-  }, [chapter.slug, user]);
+  }, [baseChapter.slug, user]);
 
   const markDone = (id: string) => setDone((s) => new Set(s).add(id));
 
