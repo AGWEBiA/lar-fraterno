@@ -8,12 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShieldCheck, Users, Building2, Mic2, BookOpen, Loader2, Plus, Ban, CheckCircle2, Trash2, Activity } from "lucide-react";
+import { ShieldCheck, Users, Building2, Mic2, BookOpen, Loader2, Plus, Ban, CheckCircle2, Trash2, Activity, AlertTriangle, Calculator, BarChart3, PlayCircle, History, RotateCcw, CalendarCheck, Pencil } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { useVoiceLibrary } from "@/hooks/useVoiceLibrary";
 import { supabase } from "@/integrations/supabase/client";
 import { GenerationsPanel } from "@/components/admin/GenerationsPanel";
+import { StuckJobsPanel } from "@/components/admin/StuckJobsPanel";
+import { CreditPlanningPanel } from "@/components/admin/CreditPlanningPanel";
+import { VoiceProgressPanel } from "@/components/admin/VoiceProgressPanel";
+import { BatchGenerationPanel } from "@/components/admin/BatchGenerationPanel";
+import { TenantVoiceHistoryPanel } from "@/components/admin/TenantVoiceHistoryPanel";
+import { RetryFailedPanel } from "@/components/admin/RetryFailedPanel";
+import { MeetingsReportPanel } from "@/components/admin/MeetingsReportPanel";
+import { UserEditDialog } from "@/components/admin/UserEditDialog";
 import { toast } from "sonner";
 
 interface UserRow {
@@ -71,18 +79,32 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" />Usuários</TabsTrigger>
-          <TabsTrigger value="tenants"><Building2 className="h-4 w-4 mr-2" />Grupos</TabsTrigger>
-          <TabsTrigger value="voices"><Mic2 className="h-4 w-4 mr-2" />Vozes</TabsTrigger>
-          <TabsTrigger value="generations"><Activity className="h-4 w-4 mr-2" />Gerações</TabsTrigger>
-          <TabsTrigger value="content"><BookOpen className="h-4 w-4 mr-2" />Conteúdo</TabsTrigger>
+        <TabsList className="flex w-full flex-wrap h-auto gap-1">
+          <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Usuários</TabsTrigger>
+          <TabsTrigger value="tenants"><Building2 className="h-4 w-4 mr-1" />Grupos</TabsTrigger>
+          <TabsTrigger value="voices"><Mic2 className="h-4 w-4 mr-1" />Vozes</TabsTrigger>
+          <TabsTrigger value="generations"><Activity className="h-4 w-4 mr-1" />Gerações</TabsTrigger>
+          <TabsTrigger value="stuck"><AlertTriangle className="h-4 w-4 mr-1" />Travados</TabsTrigger>
+          <TabsTrigger value="batch"><PlayCircle className="h-4 w-4 mr-1" />Lote</TabsTrigger>
+          <TabsTrigger value="retry"><RotateCcw className="h-4 w-4 mr-1" />Reprocessar</TabsTrigger>
+          <TabsTrigger value="progress"><BarChart3 className="h-4 w-4 mr-1" />Progresso</TabsTrigger>
+          <TabsTrigger value="planning"><Calculator className="h-4 w-4 mr-1" />Planejamento</TabsTrigger>
+          <TabsTrigger value="voice-history"><History className="h-4 w-4 mr-1" />Hist. vozes</TabsTrigger>
+          <TabsTrigger value="meetings"><CalendarCheck className="h-4 w-4 mr-1" />Reuniões</TabsTrigger>
+          <TabsTrigger value="content"><BookOpen className="h-4 w-4 mr-1" />Conteúdo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-4"><UsersPanel /></TabsContent>
         <TabsContent value="tenants" className="mt-4"><TenantsPanel /></TabsContent>
         <TabsContent value="voices" className="mt-4"><VoicesPanel /></TabsContent>
         <TabsContent value="generations" className="mt-4"><GenerationsPanel /></TabsContent>
+        <TabsContent value="stuck" className="mt-4"><StuckJobsPanel /></TabsContent>
+        <TabsContent value="batch" className="mt-4"><BatchGenerationPanel /></TabsContent>
+        <TabsContent value="retry" className="mt-4"><RetryFailedPanel /></TabsContent>
+        <TabsContent value="progress" className="mt-4"><VoiceProgressPanel /></TabsContent>
+        <TabsContent value="planning" className="mt-4"><CreditPlanningPanel /></TabsContent>
+        <TabsContent value="voice-history" className="mt-4"><TenantVoiceHistoryPanel /></TabsContent>
+        <TabsContent value="meetings" className="mt-4"><MeetingsReportPanel /></TabsContent>
         <TabsContent value="content" className="mt-4"><ContentPanel /></TabsContent>
       </Tabs>
     </div>
