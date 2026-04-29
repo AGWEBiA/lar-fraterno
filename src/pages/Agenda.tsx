@@ -160,48 +160,88 @@ const Agenda = () => {
 
       {/* Notifications */}
       <Card className="p-6 shadow-soft border-border/50 bg-card/90">
-        <h2 className="font-serif text-2xl font-semibold text-primary mb-4 flex items-center gap-2">
-          <Bell className="h-5 w-5" /> Como deseja ser avisado?
+        <h2 className="font-serif text-2xl font-semibold text-primary mb-2 flex items-center gap-2">
+          <Bell className="h-5 w-5" /> Lembretes em etapas
         </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Escolha quais avisos receber em cada momento da reunião e por qual canal.
+        </p>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium">Notificação no navegador</p>
-              <p className="text-sm text-muted-foreground">Lembrete instantâneo no celular ou desktop.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={requestPush}>Ativar</Button>
-              <Switch checked={prefs.push_enabled} onCheckedChange={(v) => savePrefs({ ...prefs, push_enabled: v })} />
-            </div>
-          </div>
+        <div className="mb-4">
+          <Button size="sm" variant="outline" onClick={requestPush}>
+            Ativar notificações do navegador
+          </Button>
+        </div>
 
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium">E-mail</p>
-              <p className="text-sm text-muted-foreground">Receba o lembrete na sua caixa de entrada.</p>
-            </div>
-            <Switch checked={prefs.email_enabled} onCheckedChange={(v) => savePrefs({ ...prefs, email_enabled: v })} />
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border border-border/50 rounded-lg">
+            <thead className="bg-secondary/50">
+              <tr>
+                <th className="text-left p-3 font-medium">Canal</th>
+                <th className="p-3 font-medium">Antes ({prefs.minutes_before} min)</th>
+                <th className="p-3 font-medium">Início</th>
+                <th className="p-3 font-medium">Fim</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border/50">
+                <td className="p-3">
+                  <p className="font-medium">Navegador</p>
+                  <p className="text-xs text-muted-foreground">Ativo agora</p>
+                </td>
+                {(["before", "start", "end"] as const).map((stage) => {
+                  const key = `push_${stage}` as const;
+                  return (
+                    <td key={stage} className="p-3 text-center">
+                      <Switch
+                        checked={prefs[key]}
+                        onCheckedChange={(v) => savePrefs({ ...prefs, [key]: v })}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr className="border-t border-border/50 opacity-60">
+                <td className="p-3">
+                  <p className="font-medium">E-mail</p>
+                  <p className="text-xs text-muted-foreground">Em breve</p>
+                </td>
+                {(["before", "start", "end"] as const).map((stage) => {
+                  const key = `email_${stage}` as const;
+                  return (
+                    <td key={stage} className="p-3 text-center">
+                      <Switch
+                        checked={prefs[key]}
+                        onCheckedChange={(v) => savePrefs({ ...prefs, [key]: v })}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr className="border-t border-border/50 opacity-60">
+                <td className="p-3">
+                  <p className="font-medium">WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">Em breve</p>
+                </td>
+                {(["before", "start", "end"] as const).map((stage) => {
+                  const key = `whatsapp_${stage}` as const;
+                  return (
+                    <td key={stage} className="p-3 text-center">
+                      <Switch
+                        checked={prefs[key]}
+                        onCheckedChange={(v) => savePrefs({ ...prefs, [key]: v })}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-medium">WhatsApp</p>
-                <p className="text-sm text-muted-foreground">Mensagem direta no seu WhatsApp.</p>
-              </div>
-              <Switch checked={prefs.whatsapp_enabled} onCheckedChange={(v) => savePrefs({ ...prefs, whatsapp_enabled: v })} />
-            </div>
-            {prefs.whatsapp_enabled && (
-              <div className="flex gap-2">
-                <Input placeholder="+55 11 90000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <Button variant="outline" onClick={savePhone}>Salvar</Button>
-              </div>
-            )}
-          </div>
-
+        <div className="grid sm:grid-cols-2 gap-3 mt-4">
           <div>
-            <Label>Antecedência do lembrete</Label>
+            <Label>Antecedência do lembrete "antes"</Label>
             <Select value={String(prefs.minutes_before)} onValueChange={(v) => savePrefs({ ...prefs, minutes_before: Number(v) })}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -212,10 +252,19 @@ const Agenda = () => {
               </SelectContent>
             </Select>
           </div>
+          {prefs.whatsapp_before || prefs.whatsapp_start || prefs.whatsapp_end ? (
+            <div>
+              <Label>Telefone para WhatsApp</Label>
+              <div className="flex gap-2 mt-1">
+                <Input placeholder="+55 11 90000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Button variant="outline" onClick={savePhone}>Salvar</Button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <p className="text-xs text-muted-foreground mt-6 pt-4 border-t border-border/50">
-          O envio de e-mail e WhatsApp será ativado nas próximas etapas — assim que configurarmos seu domínio de e-mail e a integração com Twilio.
+          O envio de e-mail e WhatsApp será ativado nas próximas etapas — após configurarmos seu domínio de e-mail e a integração com Twilio. As notificações do navegador já funcionam.
         </p>
       </Card>
     </div>
