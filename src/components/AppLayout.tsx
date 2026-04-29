@@ -21,6 +21,7 @@ export const AppLayout = () => {
   const { user, loading } = useAuth();
   const { isAdminMaster } = useUserRole();
   const navigate = useNavigate();
+  const [moreOpen, setMoreOpen] = useState(false);
   useReminderScheduler();
 
   const handleSignOut = async () => {
