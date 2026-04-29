@@ -101,6 +101,17 @@ Deno.serve(async (req) => {
     const voiceId = body.voiceId || VOICE_DEFAULT;
     const slug = body.slug;
 
+    // 0) Validar usuário e checar admin_master quando precisar gerar/regerar
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.replace("Bearer ", "");
+    let userId: string | null = null;
+    if (jwt) {
+      const { data: u } = await supabaseAdmin.auth.getUser(jwt);
+      userId = u?.user?.id ?? null;
+    }
+
+    const needsGeneration = !!body.force;
+
     // 1) cache hit? (exceto se force=true → regerar e sobrescrever)
     if (!body.force) {
       const { data: existing } = await supabaseAdmin
@@ -122,6 +133,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Gating: somente admin_master pode gerar/regerar áudio (custo de IA)
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Não autenticado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: isAdmin } = await supabaseAdmin.rpc("is_admin_master", { _user_id: userId });
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Apenas o administrador master pode gerar áudio. Selecione uma voz já gerada." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
 
     // 2) gerar com concorrência limitada (ElevenLabs: máx 3 simultâneas no plano atual; usamos 2 p/ margem).
     const chunks = splitForTTS(body.text);
