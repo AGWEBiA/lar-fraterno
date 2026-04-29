@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Bookmark, BookmarkCheck, Check, MessageSquare, Pause, Play, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Check, Loader2, MessageSquare, Pause, Play, Sparkles, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useItemProgress } from "@/hooks/useItemProgress";
+import { useChapterAudio } from "@/hooks/useChapterAudio";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const Leitor = () => {
   const { slug } = useParams();
