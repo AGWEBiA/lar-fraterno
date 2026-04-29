@@ -228,15 +228,26 @@ const UsersPanel = () => {
                   {u.blocked ? <Badge variant="destructive">Bloqueado</Badge> : <Badge variant="secondary">Ativo</Badge>}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant={u.blocked ? "outline" : "destructive"} onClick={() => toggleBlock(u.id, u.blocked)}>
-                    {u.blocked ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                  </Button>
+                  <div className="flex gap-1 justify-end">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant={u.blocked ? "outline" : "destructive"} onClick={() => toggleBlock(u.id, u.blocked)}>
+                      {u.blocked ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
+      <UserEditDialog
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        user={editing}
+        onChanged={load}
+      />
     </Card>
   );
 };
