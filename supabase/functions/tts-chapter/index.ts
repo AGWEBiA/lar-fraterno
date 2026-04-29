@@ -101,6 +101,17 @@ Deno.serve(async (req) => {
     const voiceId = body.voiceId || VOICE_DEFAULT;
     const slug = body.slug;
 
+    // 0) Validar usuário e checar admin_master quando precisar gerar/regerar
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.replace("Bearer ", "");
+    let userId: string | null = null;
+    if (jwt) {
+      const { data: u } = await supabaseAdmin.auth.getUser(jwt);
+      userId = u?.user?.id ?? null;
+    }
+
+    const needsGeneration = !!body.force;
+
     // 1) cache hit? (exceto se force=true → regerar e sobrescrever)
     if (!body.force) {
       const { data: existing } = await supabaseAdmin
