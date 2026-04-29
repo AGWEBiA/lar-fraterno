@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { auditAllChapters, type ChapterAudit } from "@/lib/chapter-audit";
-import { chapterBySlug } from "@/data/chapters";
+import { chapterBySlug, chapters as ALL_CHAPTERS } from "@/data/chapters";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -17,6 +18,13 @@ const Revisao = () => {
   const [approvals, setApprovals] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [audioCache, setAudioCache] = useState<Set<string>>(new Set());
+  const [batch, setBatch] = useState<{ running: boolean; done: number; total: number; current: string | null }>({
+    running: false,
+    done: 0,
+    total: 0,
+    current: null,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -38,6 +46,47 @@ const Revisao = () => {
         setLoading(false);
       });
   }, [user]);
+
+  // Carrega lista de capítulos com áudio já gerado.
+  useEffect(() => {
+    supabase
+      .from("audio_cache")
+      .select("chapter_slug")
+      .then(({ data }) => {
+        if (data) setAudioCache(new Set(data.map((r) => r.chapter_slug)));
+      });
+  }, [batch.done]);
+
+  const generateAudio = async (slug: string) => {
+    const ch = chapterBySlug(slug);
+    if (!ch) return false;
+    const text = `${ch.title}. ${ch.paragraphs.join(" ")}`;
+    const { data, error } = await supabase.functions.invoke("tts-chapter", {
+      body: { slug, text },
+    });
+    if (error || data?.error) {
+      toast.error(`Falha em ${ch.title}: ${data?.error ?? error?.message ?? "erro"}`);
+      return false;
+    }
+    setAudioCache((prev) => new Set(prev).add(slug));
+    return true;
+  };
+
+  const generateAll = async () => {
+    const pending = ALL_CHAPTERS.filter((c) => !audioCache.has(c.slug));
+    if (pending.length === 0) {
+      toast.success("Todos os capítulos já têm áudio gerado!");
+      return;
+    }
+    setBatch({ running: true, done: 0, total: pending.length, current: null });
+    for (let i = 0; i < pending.length; i++) {
+      const ch = pending[i];
+      setBatch((b) => ({ ...b, current: ch.title, done: i }));
+      await generateAudio(ch.slug);
+    }
+    setBatch({ running: false, done: pending.length, total: pending.length, current: null });
+    toast.success("Pré-geração concluída!");
+  };
 
   const toggleApproval = async (slug: string, approved: boolean) => {
     if (!user) return;
@@ -102,6 +151,51 @@ const Revisao = () => {
         </Card>
       )}
 
+      {/* Painel de pré-geração de áudio */}
+      <Card className="p-5 mb-6 bg-card/80 border-border/50">
+        <div className="flex items-start gap-3 flex-wrap">
+          <Sparkles className="h-5 w-5 text-accent mt-0.5" />
+          <div className="flex-1 min-w-[200px]">
+            <p className="font-serif text-lg text-primary">Áudio em alta qualidade</p>
+            <p className="text-xs text-muted-foreground">
+              {audioCache.size} de {ALL_CHAPTERS.length} capítulos com áudio HQ pronto.
+              Voz natural via ElevenLabs (PT-BR), salva em cache para reuso.
+            </p>
+          </div>
+          <Button
+            variant="hero"
+            size="sm"
+            onClick={generateAll}
+            disabled={batch.running || audioCache.size === ALL_CHAPTERS.length}
+          >
+            {batch.running ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Gerando…
+              </>
+            ) : audioCache.size === ALL_CHAPTERS.length ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" /> Tudo pronto
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" /> Pré-gerar áudio dos {ALL_CHAPTERS.length - audioCache.size} restantes
+              </>
+            )}
+          </Button>
+        </div>
+        {batch.running && (
+          <div className="mt-4 space-y-2">
+            <Progress value={(batch.done / batch.total) * 100} />
+            <p className="text-xs text-muted-foreground">
+              {batch.done}/{batch.total} — gerando: {batch.current ?? "…"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Pode demorar alguns minutos. Não feche esta aba.
+            </p>
+          </div>
+        )}
+      </Card>
+
       <div className="space-y-3">
         {audits.map((a) => (
           <AuditRow
@@ -110,8 +204,10 @@ const Revisao = () => {
             approved={!!approvals[a.slug]}
             disabled={!user || loading}
             isOpen={open === a.slug}
+            hasAudio={audioCache.has(a.slug)}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
+            onGenerateAudio={() => generateAudio(a.slug)}
           />
         ))}
       </div>
@@ -124,12 +220,21 @@ interface RowProps {
   approved: boolean;
   disabled: boolean;
   isOpen: boolean;
+  hasAudio: boolean;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
+  onGenerateAudio: () => Promise<boolean> | void;
 }
 
-const AuditRow = ({ audit, approved, disabled, isOpen, onToggleOpen, onApprove }: RowProps) => {
+const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
   const chapter = chapterBySlug(audit.slug);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+
+  const handleGenerate = async () => {
+    setGeneratingAudio(true);
+    await onGenerateAudio();
+    setGeneratingAudio(false);
+  };
 
   return (
     <Card
@@ -169,6 +274,11 @@ const AuditRow = ({ audit, approved, disabled, isOpen, onToggleOpen, onApprove }
             {approved && (
               <Badge className="bg-accent text-accent-foreground">
                 <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovado
+              </Badge>
+            )}
+            {hasAudio && (
+              <Badge variant="outline" className="border-accent/40 text-accent">
+                <Sparkles className="h-3 w-3 mr-1" /> Áudio HQ
               </Badge>
             )}
           </div>
@@ -238,6 +348,15 @@ const AuditRow = ({ audit, approved, disabled, isOpen, onToggleOpen, onApprove }
             ) : (
               <Button variant="gold" size="sm" disabled={disabled} onClick={() => onApprove(true)}>
                 <CheckCircle2 className="h-4 w-4" /> Aprovar para uso
+              </Button>
+            )}
+            {!hasAudio && (
+              <Button variant="outline" size="sm" disabled={generatingAudio} onClick={handleGenerate}>
+                {generatingAudio ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando áudio…</>
+                ) : (
+                  <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
+                )}
               </Button>
             )}
             {chapter && (
