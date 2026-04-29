@@ -16,6 +16,7 @@ interface Body {
   slug: string;
   text: string;
   voiceId?: string;
+  force?: boolean;
 }
 
 const supabaseAdmin = createClient(
