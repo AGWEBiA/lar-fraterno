@@ -154,6 +154,9 @@ export const useReminderScheduler = () => {
           email_enabled: false,
           whatsapp_enabled: false,
           minutes_before: 15,
+          push_before: true,
+          push_start: true,
+          push_end: false,
         };
       if (!prefs.push_enabled) {
         planRef.current = [];
