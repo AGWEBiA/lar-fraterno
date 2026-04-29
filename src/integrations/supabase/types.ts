@@ -14,7 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      meeting_history: {
+        Row: {
+          chapter_slug: string | null
+          created_at: string
+          held_at: string
+          id: string
+          notes: string | null
+          participants: number | null
+          user_id: string
+        }
+        Insert: {
+          chapter_slug?: string | null
+          created_at?: string
+          held_at?: string
+          id?: string
+          notes?: string | null
+          participants?: number | null
+          user_id: string
+        }
+        Update: {
+          chapter_slug?: string | null
+          created_at?: string
+          held_at?: string
+          id?: string
+          notes?: string | null
+          participants?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_enabled: boolean
+          minutes_before: number
+          push_enabled: boolean
+          updated_at: string
+          user_id: string
+          whatsapp_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          minutes_before?: number
+          push_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          whatsapp_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          minutes_before?: number
+          push_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          whatsapp_enabled?: boolean
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reading_progress: {
+        Row: {
+          chapter_slug: string
+          completed: boolean
+          id: string
+          last_read_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_slug: string
+          completed?: boolean
+          id?: string
+          last_read_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_slug?: string
+          completed?: boolean
+          id?: string
+          last_read_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          next_run_at: string | null
+          time_of_day: string
+          timezone: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_active?: boolean
+          next_run_at?: string | null
+          time_of_day: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_active?: boolean
+          next_run_at?: string | null
+          time_of_day?: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
