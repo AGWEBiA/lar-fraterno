@@ -20,6 +20,7 @@ const Leitor = () => {
   const tts = useSpeech();
   const chapter = slug ? chapterBySlug(slug) : null;
   const { rows, toggleRead, toggleBookmark, setNote } = useItemProgress(chapter?.slug);
+  const audio = useChapterAudio(chapter);
   const [draftNote, setDraftNote] = useState<Record<number, string>>({});
 
   useEffect(() => {
