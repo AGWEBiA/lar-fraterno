@@ -259,7 +259,7 @@ const Revisao = () => {
             availableVoices={audioCache.get(a.slug) ?? new Set()}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
-            onGenerateAudio={(voiceId) => generateAudio(a.slug, voiceId)}
+            onGenerateAudio={(voiceId, force) => generateAudio(a.slug, voiceId, force)}
           />
         ))}
       </div>
