@@ -334,6 +334,7 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggle
             {hasAudio && (
               <Badge variant="outline" className="border-accent/40 text-accent">
                 <Sparkles className="h-3 w-3 mr-1" /> Áudio HQ
+                {availableVoices.size > 1 && ` · ${availableVoices.size} vozes`}
               </Badge>
             )}
           </div>
@@ -405,15 +406,38 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggle
                 <CheckCircle2 className="h-4 w-4" /> Aprovar para uso
               </Button>
             )}
-            {!hasAudio && (
-              <Button variant="outline" size="sm" disabled={generatingAudio} onClick={handleGenerate}>
+            <div className="flex items-center gap-2">
+              <Select value={rowVoiceId} onValueChange={setRowVoiceId} disabled={generatingAudio}>
+                <SelectTrigger className="h-9 text-xs w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VOICES.map((v) => (
+                    <SelectItem key={v.id} value={v.id} className="text-xs">
+                      <span className="font-medium">{v.name}</span>{" "}
+                      {availableVoices.has(v.id) && (
+                        <span className="text-accent">✓</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={generatingAudio || hasAudioForRowVoice}
+                onClick={handleGenerate}
+                title={hasAudioForRowVoice ? "Já existe áudio gerado nesta voz" : "Gerar áudio nesta voz"}
+              >
                 {generatingAudio ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando áudio…</>
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
+                ) : hasAudioForRowVoice ? (
+                  <><CheckCircle2 className="h-4 w-4" /> Pronto</>
                 ) : (
                   <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
                 )}
               </Button>
-            )}
+            </div>
             {chapter && (
               <span className="text-xs text-muted-foreground self-center ml-auto">
                 {chapter.paragraphs.length} parágrafos · ~
