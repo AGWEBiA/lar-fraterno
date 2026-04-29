@@ -2,6 +2,7 @@
 // Tradução: Guillon Ribeiro (FEB). Conteúdo carregado do PDF original do usuário,
 // destinado a uso pessoal/familiar no contexto do Evangelho no Lar.
 import rawData from "./evangelho-full.json";
+import { applyContentFixes } from "./content-fixes";
 
 export type ChapterNode =
   | { type: "paragraph"; text: string }
@@ -92,8 +93,9 @@ const data = rawData as Array<{
 }>;
 
 export const chapters: Chapter[] = data.map((c) => {
+  const fixedNodes = applyContentFixes(c.slug, c.nodes);
   const paragraphs: string[] = [];
-  for (const n of c.nodes) {
+  for (const n of fixedNodes) {
     if (n.type === "item") {
       for (const p of n.paragraphs) paragraphs.push(`${n.n}. ${p}`);
     } else {
@@ -107,7 +109,7 @@ export const chapters: Chapter[] = data.map((c) => {
     title: c.title,
     subtitle: SUBTITLES[c.slug],
     summary: SUMMARIES[c.slug] ?? "",
-    nodes: c.nodes,
+    nodes: fixedNodes,
     paragraphs,
   };
 });

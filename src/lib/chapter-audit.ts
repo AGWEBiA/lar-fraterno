@@ -4,6 +4,8 @@ export interface ChapterIssue {
   type: "missing" | "duplicate" | "out_of_order";
   itemNumber?: number;
   detail: string;
+  /** Lacunas reconhecidas do PDF de origem — não indicam erro de parsing. */
+  acknowledged?: boolean;
 }
 
 export interface ChapterAudit {
@@ -13,7 +15,17 @@ export interface ChapterAudit {
   expectedMax: number;
   issues: ChapterIssue[];
   hasIssues: boolean;
+  /** True quando todas as issues são lacunas já reconhecidas. */
+  allAcknowledged: boolean;
 }
+
+/**
+ * Itens reconhecidamente ausentes no PDF original (não correspondem a
+ * problema de parsing nem podem ser resolvidos por correção automática).
+ */
+const ACKNOWLEDGED_MISSING: Record<string, number[]> = {
+  "capitulo-28": [7, 13, 14, 32, 33, 55, 56, 66],
+};
 
 export const auditChapter = (chapter: Chapter): ChapterAudit => {
   const items = chapter.nodes.filter(
@@ -22,13 +34,21 @@ export const auditChapter = (chapter: Chapter): ChapterAudit => {
   const numbers = items.map((i) => i.n);
   const expectedMax = numbers.length ? Math.max(...numbers) : 0;
   const issues: ChapterIssue[] = [];
+  const ack = new Set(ACKNOWLEDGED_MISSING[chapter.slug] ?? []);
 
   const seen = new Map<number, number>();
   for (const n of numbers) seen.set(n, (seen.get(n) ?? 0) + 1);
 
   for (let i = 1; i <= expectedMax; i++) {
     if (!seen.has(i)) {
-      issues.push({ type: "missing", itemNumber: i, detail: `Item ${i} não encontrado` });
+      issues.push({
+        type: "missing",
+        itemNumber: i,
+        detail: ack.has(i)
+          ? `Item ${i} ausente no PDF original (lacuna conhecida)`
+          : `Item ${i} não encontrado`,
+        acknowledged: ack.has(i),
+      });
     } else if ((seen.get(i) ?? 0) > 1) {
       issues.push({
         type: "duplicate",
@@ -38,7 +58,6 @@ export const auditChapter = (chapter: Chapter): ChapterAudit => {
     }
   }
 
-  // out-of-order: any item whose number is lower than the previous one
   let prev = 0;
   for (const n of numbers) {
     if (n < prev) {
@@ -51,6 +70,8 @@ export const auditChapter = (chapter: Chapter): ChapterAudit => {
     prev = Math.max(prev, n);
   }
 
+  const allAcknowledged = issues.length > 0 && issues.every((i) => i.acknowledged);
+
   return {
     slug: chapter.slug,
     title: chapter.title,
@@ -58,6 +79,7 @@ export const auditChapter = (chapter: Chapter): ChapterAudit => {
     expectedMax,
     issues,
     hasIssues: issues.length > 0,
+    allAcknowledged,
   };
 };
 
