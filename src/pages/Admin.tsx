@@ -28,6 +28,7 @@ interface UserRow {
   id: string;
   email: string | null;
   full_name: string | null;
+  phone: string | null;
   created_at: string;
   roles: AppRole[];
   blocked: boolean;
@@ -118,11 +119,12 @@ const UsersPanel = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [editing, setEditing] = useState<UserRow | null>(null);
 
   const load = async () => {
     setLoading(true);
     const [{ data: profs }, { data: roles }, { data: status }] = await Promise.all([
-      supabase.from("profiles").select("id, email, full_name, created_at"),
+      supabase.from("profiles").select("id, email, full_name, phone, created_at"),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("user_status").select("user_id, blocked"),
     ]);
@@ -138,6 +140,7 @@ const UsersPanel = () => {
         id: p.id,
         email: p.email,
         full_name: p.full_name,
+        phone: p.phone,
         created_at: p.created_at,
         roles: rolesByUser.get(p.id) ?? [],
         blocked: blockedSet.has(p.id),
