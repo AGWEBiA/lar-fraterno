@@ -151,10 +151,16 @@ const AuditRow = ({ audit, approved, disabled, isOpen, onToggleOpen, onApprove }
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-serif text-lg font-semibold text-primary">{audit.title}</span>
             {audit.hasIssues ? (
-              <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="h-3 w-3 mr-1" /> {audit.issues.length} alerta
-                {audit.issues.length > 1 ? "s" : ""}
-              </Badge>
+              audit.allAcknowledged ? (
+                <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">
+                  <AlertTriangle className="h-3 w-3 mr-1" /> Lacuna do PDF
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-3 w-3 mr-1" /> {audit.issues.length} alerta
+                  {audit.issues.length > 1 ? "s" : ""}
+                </Badge>
+              )
             ) : (
               <Badge variant="outline" className="border-accent/40 text-accent">
                 <CheckCircle2 className="h-3 w-3 mr-1" /> Sem alertas
