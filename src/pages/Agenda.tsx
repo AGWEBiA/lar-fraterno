@@ -247,6 +247,120 @@ const Agenda = () => {
         )}
       </Card>
 
+      {/* Plano de sessões */}
+      <Card className="p-6 shadow-soft border-border/50 bg-card/90">
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-primary flex items-center gap-2">
+              <CalendarRange className="h-5 w-5" /> Plano de sessões
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Como organizar a sequência das reuniões pelos 28 capítulos.
+            </p>
+          </div>
+          <Tabs
+            value={prefs.schedule_mode}
+            onValueChange={(v) => savePrefs({ ...prefs, schedule_mode: v as "manual" | "automatic" })}
+          >
+            <TabsList>
+              <TabsTrigger value="manual">Manual</TabsTrigger>
+              <TabsTrigger value="automatic">Automático</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+          <div>
+            <Label>Método de leitura</Label>
+            <Select
+              value={prefs.reading_method}
+              onValueChange={(v) =>
+                savePrefs({ ...prefs, reading_method: v as "sequential" | "random" })
+              }
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sequential">Sequencial — capítulo após capítulo</SelectItem>
+                <SelectItem value="random">Aleatório — abrir o livro ao acaso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {prefs.schedule_mode === "automatic" ? (
+          <div className="rounded-lg border border-border/50 bg-secondary/30 p-4 mb-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-4 w-4 text-primary mt-0.5" />
+              <div className="text-sm text-foreground">
+                Vamos agendar uma reunião por semana, no seu primeiro dia ativo,
+                avançando capítulo por capítulo. Caps. V, XIII, XVI e XXVIII serão divididos em sessões menores.
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button variant="hero" size="sm" onClick={generateAutoPlan}>
+                <Wand2 className="h-4 w-4" /> Gerar plano completo
+              </Button>
+              {planRows.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearPlan}>
+                  <Trash2 className="h-4 w-4" /> Limpar plano
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border/50 bg-secondary/30 p-4 mb-3 text-sm text-muted-foreground">
+            <ListChecks className="inline h-4 w-4 mr-1 text-primary" />
+            Modo manual: você escolhe na tela de Reunião quais itens entram em cada encontro.
+            As sessões concluídas ficam registradas aqui.
+          </div>
+        )}
+
+        {upcoming.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              Próximas sessões
+            </p>
+            <div className="space-y-1.5">
+              {upcoming.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-3 p-2 rounded-md bg-card/60 border border-border/40 text-sm"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-primary truncate">{chapterTitle(r.chapter_slug)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sessão {r.session_index} · {r.item_numbers.length} item(ns)
+                      {r.scheduled_for &&
+                        ` · ${new Date(r.scheduled_for).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          weekday: "short",
+                        })}`}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {r.reading_method === "random" ? "Aleatório" : "Sequencial"}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removePlan(r.id)}
+                    aria-label="Remover sessão"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {planRows.filter((r) => !r.completed).length > upcoming.length && (
+              <p className="text-xs text-muted-foreground mt-2">
+                + {planRows.filter((r) => !r.completed).length - upcoming.length} sessões adicionais
+              </p>
+            )}
+          </div>
+        )}
+      </Card>
+
       {/* Notifications */}
       <Card className="p-6 shadow-soft border-border/50 bg-card/90">
         <h2 className="font-serif text-2xl font-semibold text-primary mb-2 flex items-center gap-2">
