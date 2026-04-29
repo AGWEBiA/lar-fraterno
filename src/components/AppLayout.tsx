@@ -69,6 +69,14 @@ export const AppLayout = () => {
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Revisão de capítulos">
                   <Link to="/revisao"><ShieldCheck className="h-4 w-4 mr-1" /> Revisão</Link>
                 </Button>
+                <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Meus grupos">
+                  <Link to="/grupos"><Building2 className="h-4 w-4 mr-1" /> Grupos</Link>
+                </Button>
+                {isAdminMaster && (
+                  <Button asChild variant="ghost" size="sm" className="hidden sm:flex" title="Painel admin">
+                    <Link to="/admin"><ShieldCheck className="h-4 w-4 mr-1" /> Admin</Link>
+                  </Button>
+                )}
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
                   <Link to="/perfil"><User className="h-4 w-4 mr-1" /> Perfil</Link>
                 </Button>
