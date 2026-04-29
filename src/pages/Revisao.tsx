@@ -51,7 +51,6 @@ const RevisaoInner = () => {
     supabase
       .from("chapter_approvals")
       .select("chapter_slug, approved")
-      .eq("user_id", user.id)
       .then(({ data, error }) => {
         if (error) {
           toast.error("Não foi possível carregar aprovações.");
