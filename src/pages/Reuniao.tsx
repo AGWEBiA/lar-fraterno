@@ -281,7 +281,7 @@ const Reuniao = () => {
 
         <div className="mt-3 flex flex-wrap gap-2 items-center border-t border-border/50 pt-3">
           <Button
-            onClick={generateGuide}
+            onClick={() => generateGuide(false)}
             disabled={generating || !approved}
             variant={guide ? "outline" : "hero"}
             size="sm"
