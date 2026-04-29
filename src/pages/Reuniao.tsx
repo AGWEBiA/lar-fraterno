@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
   Circle,
+  Dices,
+  Download,
+  ListChecks,
   Pause,
   Play,
   Plus,
@@ -21,17 +24,31 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { meetingSteps } from "@/data/meeting-steps";
 import { chapters } from "@/data/chapters";
 import { buildGuide } from "@/data/meeting-guide-template";
+import { isLongChapter, suggestSessions } from "@/data/session-planner";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useChapterEdits } from "@/hooks/useChapterOverrides";
+import { useSessionPlan } from "@/hooks/useSessionPlan";
+import { useItemProgress } from "@/hooks/useItemProgress";
+import { ItemSelector } from "@/components/ItemSelector";
+import { exportRoteiroPdf } from "@/lib/exportRoteiroPdf";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useChapterApprovals } from "@/hooks/useChapterApprovals";
 import { toast } from "sonner";
+
+type ReadingMethod = "sequential" | "random";
 
 const Reuniao = () => {
   const { user } = useAuth();
@@ -46,20 +63,84 @@ const Reuniao = () => {
   const [notes, setNotes] = useState("");
   const [meetingTitle, setMeetingTitle] = useState("");
 
+  const [method, setMethod] = useState<ReadingMethod>("sequential");
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const baseChapter = chapters[chapterIdx];
   const { chapter: editedChapter } = useChapterEdits(baseChapter.slug);
   const chapter = editedChapter ?? baseChapter;
   const approved = isApproved(baseChapter.slug);
+  const longChapter = isLongChapter(baseChapter.slug);
 
-  const progress = (done.size / meetingSteps.length) * 100;
-  const step = meetingSteps[current];
+  const { rows: itemProgress, toggleRead } = useItemProgress(baseChapter.slug);
+  const { rows: planRows, create: createSession } = useSessionPlan(baseChapter.slug);
 
-  // Roteiro fixo baseado em template + dados do capítulo (sem IA).
+  // ---- Lista de itens disponíveis no capítulo
+  const allItems = useMemo(
+    () =>
+      chapter.nodes.filter(
+        (n): n is Extract<typeof chapter.nodes[number], { type: "item" }> => n.type === "item",
+      ),
+    [chapter],
+  );
+
+  const usedInOtherSessions = useMemo(
+    () => Array.from(new Set(planRows.flatMap((r) => r.item_numbers))),
+    [planRows],
+  );
+  const readItems = useMemo(
+    () => Object.values(itemProgress).filter((r) => r.read).map((r) => r.item_number),
+    [itemProgress],
+  );
+
+  // ---- Seleção inicial: respeita método
+  useEffect(() => {
+    if (allItems.length === 0) {
+      setSelectedItems([]);
+      return;
+    }
+    if (method === "random") {
+      const candidates = allItems.map((i) => i.n).filter((n) => !usedInOtherSessions.includes(n));
+      const pool = candidates.length ? candidates : allItems.map((i) => i.n);
+      setSelectedItems([pool[Math.floor(Math.random() * pool.length)]]);
+      return;
+    }
+    // Sequencial: pega o primeiro item ainda não estudado em outras sessões;
+    // se o capítulo é longo, pega o primeiro bloco sugerido.
+    const unseen = allItems.map((i) => i.n).filter((n) => !usedInOtherSessions.includes(n));
+    if (longChapter) {
+      const suggestions = suggestSessions(chapter);
+      const next =
+        suggestions.find((s) => s.itemNumbers.some((n) => unseen.includes(n))) ?? suggestions[0];
+      setSelectedItems(next?.itemNumbers ?? [unseen[0] ?? allItems[0].n]);
+    } else {
+      setSelectedItems([unseen[0] ?? allItems[0].n]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterIdx, method, allItems.length]);
+
+  const drawRandom = () => {
+    if (!allItems.length) return;
+    const pool = allItems.map((i) => i.n);
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    setSelectedItems([pick]);
+    toast.success(`Item ${pick} sorteado.`);
+  };
+
+  // ---- Roteiro
   const guide = useMemo(
     () => buildGuide({ title: chapter.title, summary: chapter.summary }),
     [chapter.title, chapter.summary],
   );
 
+  const selectedItemNodes = useMemo(
+    () => allItems.filter((i) => selectedItems.includes(i.n)),
+    [allItems, selectedItems],
+  );
+
+  const progress = (done.size / meetingSteps.length) * 100;
+  const step = meetingSteps[current];
   const markDone = (id: string) => setDone((s) => new Set(s).add(id));
 
   const next = () => {
@@ -106,6 +187,18 @@ const Reuniao = () => {
       },
       { onConflict: "user_id,chapter_slug" },
     );
+    // Marca itens lidos
+    for (const n of selectedItems) {
+      if (!itemProgress[n]?.read) await toggleRead(n);
+    }
+    // Registra a sessão no plano
+    await createSession({
+      chapter_slug: baseChapter.slug,
+      session_index: (planRows[planRows.length - 1]?.session_index ?? 0) + 1,
+      item_numbers: selectedItems,
+      reading_method: method,
+    });
+
     toast.success("Reunião salva no histórico.");
     setFinishOpen(false);
     setNotes("");
@@ -113,13 +206,23 @@ const Reuniao = () => {
     setParticipantInput("");
   };
 
-  // Decide what text to speak / show in each step.
+  const exportPdf = () => {
+    exportRoteiroPdf({
+      chapter,
+      guide,
+      selectedItems,
+      participants,
+    });
+    toast.success("PDF gerado!");
+  };
+
+  // ---- Conteúdo dinâmico do passo
   const stepContent = (() => {
     switch (step.id) {
       case "prece-inicial":
         return guide.opening_prayer;
       case "leitura":
-        return null; // handled below with full chapter
+        return null;
       case "comentarios":
         return [
           ...guide.commentary_points.map((p) => `• ${p.title}: ${p.text}`),
@@ -139,7 +242,10 @@ const Reuniao = () => {
   const speakStep = () => {
     if (!approved) return;
     if (step.id === "leitura") {
-      const text = `${chapter.title}. ${guide.reading_intro} ${chapter.paragraphs.join(" ")}`;
+      const itemsText = selectedItemNodes
+        .map((i) => `Item ${i.n}. ${i.paragraphs.join(" ")}`)
+        .join(" ");
+      const text = `${chapter.title}. ${guide.reading_intro} ${itemsText || chapter.paragraphs.join(" ")}`;
       tts.speak(text);
       return;
     }
@@ -152,13 +258,17 @@ const Reuniao = () => {
         <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
           ← Início
         </Link>
-        <h1 className="font-serif text-4xl md:text-5xl font-semibold text-primary mt-2">Roteiro guiado</h1>
-        <p className="text-muted-foreground mt-1">Caminhe no seu tempo. Cada passo é um momento de paz.</p>
+        <h1 className="font-serif text-4xl md:text-5xl font-semibold text-primary mt-2">
+          Roteiro guiado
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Caminhe no seu tempo. Cada passo é um momento de paz.
+        </p>
       </div>
 
-      {/* Chapter selector + IA guide controls */}
-      <Card className="p-4 md:p-5 mb-6 bg-card/90 border-border/50 shadow-soft">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Capítulo + método de leitura */}
+      <Card className="p-4 md:p-5 mb-4 bg-card/90 border-border/50 shadow-soft">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
           <BookOpen className="h-5 w-5 text-primary shrink-0" />
           <div className="flex-1 min-w-[200px]">
             <label className="text-xs text-muted-foreground block mb-1">Capítulo desta reunião</label>
@@ -177,8 +287,8 @@ const Reuniao = () => {
               ))}
             </select>
           </div>
-          {!approvalsLoading && (
-            approved ? (
+          {!approvalsLoading &&
+            (approved ? (
               <Badge variant="outline" className="border-accent/40 text-accent gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Aprovado
               </Badge>
@@ -186,9 +296,39 @@ const Reuniao = () => {
               <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400 gap-1">
                 <ShieldAlert className="h-3 w-3" /> Em revisão
               </Badge>
-            )
-          )}
+            ))}
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs value={method} onValueChange={(v) => setMethod(v as ReadingMethod)}>
+            <TabsList>
+              <TabsTrigger value="sequential" className="gap-1">
+                <ListChecks className="h-4 w-4" /> Sequencial
+              </TabsTrigger>
+              <TabsTrigger value="random" className="gap-1">
+                <Dices className="h-4 w-4" /> Aleatório
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {method === "random" && (
+            <Button size="sm" variant="outline" onClick={drawRandom}>
+              <Dices className="h-4 w-4" /> Sortear novamente
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+            <ListChecks className="h-4 w-4" /> Escolher itens ({selectedItems.length})
+          </Button>
+          <Button size="sm" variant="ghost" onClick={exportPdf}>
+            <Download className="h-4 w-4" /> Exportar PDF
+          </Button>
+        </div>
+
+        {longChapter && (
+          <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-md px-3 py-2">
+            ✦ Capítulo longo — sugestão de divisão automática em {suggestSessions(chapter).length} sessões.
+            A seleção atual já segue essa divisão; ajuste se quiser.
+          </div>
+        )}
 
         {!approved && user && !approvalsLoading && (
           <div className="mt-3 text-sm text-muted-foreground border-t border-border/50 pt-3">
@@ -198,7 +338,6 @@ const Reuniao = () => {
             </Link>
           </div>
         )}
-
       </Card>
 
       <div className="mb-6">
@@ -259,10 +398,11 @@ const Reuniao = () => {
           <div className="text-xs uppercase tracking-wider text-accent font-semibold mb-2">
             {step.duration}
           </div>
-          <h2 className="font-serif text-3xl md:text-4xl font-semibold text-primary mb-3">{step.title}</h2>
+          <h2 className="font-serif text-3xl md:text-4xl font-semibold text-primary mb-3">
+            {step.title}
+          </h2>
           <p className="text-muted-foreground mb-6 leading-relaxed">{step.guidance}</p>
 
-          {/* AI-generated content for the step */}
           {(stepContent || step.id === "leitura") && (
             <div className="rounded-lg bg-accent-soft/50 border border-accent/20 p-5 mb-6">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -310,14 +450,27 @@ const Reuniao = () => {
                   {guide?.reading_intro && (
                     <p className="text-sm text-foreground italic mb-3">{guide.reading_intro}</p>
                   )}
-                  <p className="text-sm text-muted-foreground italic mb-4">{chapter.summary}</p>
-                  <Button asChild size="sm" variant="link" className="px-0">
-                    <Link to={`/biblioteca/${chapter.slug}`}>Ler texto completo →</Link>
-                  </Button>
-                  {approved && (
-                    <div className="reading-prose text-base max-h-64 overflow-y-auto pr-2 border-t border-border/50 pt-4 mt-4">
-                      {chapter.paragraphs.slice(0, 2).map((p, i) => (
-                        <p key={i}>{p}</p>
+
+                  {selectedItemNodes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      Nenhum item selecionado. Clique em "Escolher itens" acima.
+                    </p>
+                  ) : (
+                    <div className="reading-prose text-base max-h-80 overflow-y-auto pr-2 border-t border-border/50 pt-4 mt-2 space-y-4">
+                      {selectedItemNodes.map((item) => (
+                        <div key={item.n}>
+                          <p className="font-semibold text-primary mb-1">
+                            Item {item.n}
+                            {itemProgress[item.n]?.read && (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-2">
+                                ✓ lido
+                              </span>
+                            )}
+                          </p>
+                          {item.paragraphs.map((p, j) => (
+                            <p key={j}>{p}</p>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -351,9 +504,10 @@ const Reuniao = () => {
                 )
               )}
 
-
               {!tts.supported && (
-                <p className="text-xs text-muted-foreground mt-3">Seu navegador não suporta leitura por voz.</p>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Seu navegador não suporta leitura por voz.
+                </p>
               )}
               {!approved && (
                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-3 flex items-center gap-1">
@@ -382,6 +536,33 @@ const Reuniao = () => {
         </Card>
       </div>
 
+      {/* Picker dialog */}
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-primary">
+              Selecionar itens da reunião
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Escolha quais itens serão lidos e comentados nesta reunião. Itens já estudados em outras sessões aparecem destacados.
+          </p>
+          <ItemSelector
+            chapter={chapter}
+            selected={selectedItems}
+            onChange={setSelectedItems}
+            alreadyUsed={usedInOtherSessions}
+            alreadyRead={readItems}
+          />
+          <DialogFooter>
+            <Button variant="hero" onClick={() => setPickerOpen(false)}>
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Finish dialog */}
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -436,6 +617,9 @@ const Reuniao = () => {
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Os itens lidos serão marcados como concluídos no seu progresso.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setFinishOpen(false)}>

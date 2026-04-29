@@ -155,6 +155,45 @@ export type Database = {
         }
         Relationships: []
       }
+      item_progress: {
+        Row: {
+          bookmarked: boolean
+          chapter_slug: string
+          created_at: string
+          id: string
+          item_number: number
+          note: string | null
+          read: boolean
+          read_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bookmarked?: boolean
+          chapter_slug: string
+          created_at?: string
+          id?: string
+          item_number: number
+          note?: string | null
+          read?: boolean
+          read_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bookmarked?: boolean
+          chapter_slug?: string
+          created_at?: string
+          id?: string
+          item_number?: number
+          note?: string | null
+          read?: boolean
+          read_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meeting_history: {
         Row: {
           chapter_slug: string | null
@@ -203,6 +242,8 @@ export type Database = {
           push_enabled: boolean
           push_end: boolean
           push_start: boolean
+          reading_method: string
+          schedule_mode: string
           updated_at: string
           user_id: string
           whatsapp_before: boolean
@@ -221,6 +262,8 @@ export type Database = {
           push_enabled?: boolean
           push_end?: boolean
           push_start?: boolean
+          reading_method?: string
+          schedule_mode?: string
           updated_at?: string
           user_id: string
           whatsapp_before?: boolean
@@ -239,6 +282,8 @@ export type Database = {
           push_enabled?: boolean
           push_end?: boolean
           push_start?: boolean
+          reading_method?: string
+          schedule_mode?: string
           updated_at?: string
           user_id?: string
           whatsapp_before?: boolean
@@ -333,6 +378,48 @@ export type Database = {
           time_of_day?: string
           timezone?: string
           title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      session_plan: {
+        Row: {
+          chapter_slug: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          item_numbers: number[]
+          reading_method: string
+          scheduled_for: string | null
+          session_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_slug: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          item_numbers?: number[]
+          reading_method?: string
+          scheduled_for?: string | null
+          session_index: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_slug?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          item_numbers?: number[]
+          reading_method?: string
+          scheduled_for?: string | null
+          session_index?: number
           updated_at?: string
           user_id?: string
         }

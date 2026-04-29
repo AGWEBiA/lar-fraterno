@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
-import { Bell, Calendar as CalendarIcon, Clock, Plus, Trash2 } from "lucide-react";
+import { Bell, Calendar as CalendarIcon, CalendarRange, Clock, ListChecks, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSessionPlan, type SessionPlanRow } from "@/hooks/useSessionPlan";
+import { chapters } from "@/data/chapters";
+import { isLongChapter, suggestSessions } from "@/data/session-planner";
 import { toast } from "sonner";
 
 const DAYS = [
@@ -23,6 +28,8 @@ interface Prefs {
   push_before: boolean; push_start: boolean; push_end: boolean;
   email_before: boolean; email_start: boolean; email_end: boolean;
   whatsapp_before: boolean; whatsapp_start: boolean; whatsapp_end: boolean;
+  schedule_mode: "manual" | "automatic";
+  reading_method: "sequential" | "random";
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -30,6 +37,18 @@ const DEFAULT_PREFS: Prefs = {
   push_before: true, push_start: true, push_end: false,
   email_before: true, email_start: false, email_end: false,
   whatsapp_before: true, whatsapp_start: false, whatsapp_end: false,
+  schedule_mode: "manual",
+  reading_method: "sequential",
+};
+
+/** Próxima ocorrência do dia/horário a partir de "from". */
+const nextOccurrence = (from: Date, dayOfWeek: number, time: string) => {
+  const [hh, mm] = time.split(":").map(Number);
+  const d = new Date(from);
+  d.setHours(hh, mm, 0, 0);
+  const diff = (dayOfWeek - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + (diff === 0 && d <= from ? 7 : diff));
+  return d;
 };
 
 const Agenda = () => {
@@ -40,6 +59,7 @@ const Agenda = () => {
   const [day, setDay] = useState("3");
   const [time, setTime] = useState("20:00");
   const [loading, setLoading] = useState(true);
+  const { rows: planRows, create: createPlan, remove: removePlan, reload: reloadPlan } = useSessionPlan();
 
   const load = async () => {
     if (!user) return;
@@ -100,6 +120,75 @@ const Agenda = () => {
     toast.success("Telefone salvo!");
   };
 
+  /** Gera todas as sessões dos 28 capítulos, agendadas semanalmente
+   *  no primeiro `schedules` ativo do usuário. Capítulos longos viram várias sessões. */
+  const generateAutoPlan = async () => {
+    if (!user) return;
+    const active = schedules.find((s) => s.is_active) ?? schedules[0];
+    if (!active) {
+      toast.error("Adicione primeiro um dia/horário semanal.");
+      return;
+    }
+    if (planRows.length > 0) {
+      const ok = window.confirm(
+        "Já existe um plano. Isso vai apagar o plano atual e gerar um novo. Continuar?",
+      );
+      if (!ok) return;
+      await supabase.from("session_plan").delete().eq("user_id", user.id);
+    }
+
+    let cursor = nextOccurrence(new Date(), active.day_of_week, active.time_of_day.slice(0, 5));
+    const inserts: Array<{
+      user_id: string;
+      chapter_slug: string;
+      session_index: number;
+      item_numbers: number[];
+      scheduled_for: string;
+      reading_method: string;
+    }> = [];
+
+    for (const ch of chapters) {
+      const sessions = isLongChapter(ch.slug)
+        ? suggestSessions(ch)
+        : [{ index: 1, itemNumbers: ch.nodes.filter((n) => n.type === "item").map((n: any) => n.n) }];
+      for (const sess of sessions) {
+        inserts.push({
+          user_id: user.id,
+          chapter_slug: ch.slug,
+          session_index: sess.index,
+          item_numbers: sess.itemNumbers,
+          scheduled_for: cursor.toISOString(),
+          reading_method: prefs.reading_method,
+        });
+        cursor = new Date(cursor);
+        cursor.setDate(cursor.getDate() + 7);
+      }
+    }
+    await supabase.from("session_plan").insert(inserts);
+    await reloadPlan();
+    toast.success(`${inserts.length} sessões agendadas!`);
+  };
+
+  const clearPlan = async () => {
+    if (!user) return;
+    if (!window.confirm("Apagar todo o plano de sessões?")) return;
+    await supabase.from("session_plan").delete().eq("user_id", user.id);
+    await reloadPlan();
+    toast.success("Plano removido.");
+  };
+
+  const chapterTitle = (slug: string) => {
+    const c = chapters.find((x) => x.slug === slug);
+    return c ? `${c.roman} — ${c.title}` : slug;
+  };
+  const upcoming = planRows
+    .filter((r) => !r.completed)
+    .sort(
+      (a, b) =>
+        new Date(a.scheduled_for ?? 0).getTime() - new Date(b.scheduled_for ?? 0).getTime(),
+    )
+    .slice(0, 8);
+
   if (loading) return <div className="container py-12 text-center text-muted-foreground">Carregando...</div>;
 
   return (
@@ -154,6 +243,120 @@ const Agenda = () => {
                 </Button>
               </div>
             ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Plano de sessões */}
+      <Card className="p-6 shadow-soft border-border/50 bg-card/90">
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-primary flex items-center gap-2">
+              <CalendarRange className="h-5 w-5" /> Plano de sessões
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Como organizar a sequência das reuniões pelos 28 capítulos.
+            </p>
+          </div>
+          <Tabs
+            value={prefs.schedule_mode}
+            onValueChange={(v) => savePrefs({ ...prefs, schedule_mode: v as "manual" | "automatic" })}
+          >
+            <TabsList>
+              <TabsTrigger value="manual">Manual</TabsTrigger>
+              <TabsTrigger value="automatic">Automático</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+          <div>
+            <Label>Método de leitura</Label>
+            <Select
+              value={prefs.reading_method}
+              onValueChange={(v) =>
+                savePrefs({ ...prefs, reading_method: v as "sequential" | "random" })
+              }
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sequential">Sequencial — capítulo após capítulo</SelectItem>
+                <SelectItem value="random">Aleatório — abrir o livro ao acaso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {prefs.schedule_mode === "automatic" ? (
+          <div className="rounded-lg border border-border/50 bg-secondary/30 p-4 mb-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-4 w-4 text-primary mt-0.5" />
+              <div className="text-sm text-foreground">
+                Vamos agendar uma reunião por semana, no seu primeiro dia ativo,
+                avançando capítulo por capítulo. Caps. V, XIII, XVI e XXVIII serão divididos em sessões menores.
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button variant="hero" size="sm" onClick={generateAutoPlan}>
+                <Wand2 className="h-4 w-4" /> Gerar plano completo
+              </Button>
+              {planRows.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearPlan}>
+                  <Trash2 className="h-4 w-4" /> Limpar plano
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border/50 bg-secondary/30 p-4 mb-3 text-sm text-muted-foreground">
+            <ListChecks className="inline h-4 w-4 mr-1 text-primary" />
+            Modo manual: você escolhe na tela de Reunião quais itens entram em cada encontro.
+            As sessões concluídas ficam registradas aqui.
+          </div>
+        )}
+
+        {upcoming.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              Próximas sessões
+            </p>
+            <div className="space-y-1.5">
+              {upcoming.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-3 p-2 rounded-md bg-card/60 border border-border/40 text-sm"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-primary truncate">{chapterTitle(r.chapter_slug)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sessão {r.session_index} · {r.item_numbers.length} item(ns)
+                      {r.scheduled_for &&
+                        ` · ${new Date(r.scheduled_for).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          weekday: "short",
+                        })}`}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {r.reading_method === "random" ? "Aleatório" : "Sequencial"}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removePlan(r.id)}
+                    aria-label="Remover sessão"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {planRows.filter((r) => !r.completed).length > upcoming.length && (
+              <p className="text-xs text-muted-foreground mt-2">
+                + {planRows.filter((r) => !r.completed).length - upcoming.length} sessões adicionais
+              </p>
+            )}
           </div>
         )}
       </Card>
