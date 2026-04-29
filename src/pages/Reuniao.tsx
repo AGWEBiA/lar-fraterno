@@ -90,27 +90,49 @@ const Reuniao = () => {
     tts.stop();
   };
 
-  const finish = async () => {
+  const finish = () => {
     markDone(step.id);
     tts.stop();
-    if (user) {
-      await supabase.from("meeting_history").insert({
-        user_id: user.id,
-        chapter_slug: chapter.slug,
-      });
-      await supabase.from("reading_progress").upsert(
-        {
-          user_id: user.id,
-          chapter_slug: chapter.slug,
-          completed: true,
-          last_read_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,chapter_slug" },
-      );
-      toast.success("Reunião registrada com gratidão.");
-    } else {
+    setMeetingTitle(chapter.title);
+    setFinishOpen(true);
+  };
+
+  const addParticipant = () => {
+    const v = participantInput.trim();
+    if (!v || participants.includes(v)) return;
+    setParticipants([...participants, v]);
+    setParticipantInput("");
+  };
+
+  const saveMeeting = async () => {
+    if (!user) {
       toast.success("Reunião concluída! Crie uma conta para salvar seu progresso.");
+      setFinishOpen(false);
+      return;
     }
+    await supabase.from("meeting_history").insert({
+      user_id: user.id,
+      chapter_slug: baseChapter.slug,
+      title: meetingTitle || chapter.title,
+      participants_list: participants,
+      participants: participants.length || 1,
+      notes,
+      held_at: new Date().toISOString(),
+    });
+    await supabase.from("reading_progress").upsert(
+      {
+        user_id: user.id,
+        chapter_slug: baseChapter.slug,
+        completed: true,
+        last_read_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,chapter_slug" },
+    );
+    toast.success("Reunião salva no histórico.");
+    setFinishOpen(false);
+    setNotes("");
+    setParticipants([]);
+    setParticipantInput("");
   };
 
   const generateGuide = async () => {
