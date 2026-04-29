@@ -16,6 +16,7 @@ import Perfil from "./pages/Perfil";
 import Revisao from "./pages/Revisao";
 import RevisaoCapitulo from "./pages/RevisaoCapitulo";
 import Historico from "./pages/Historico";
+import MeetingDetail from "./pages/MeetingDetail";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import Tenants from "./pages/Tenants";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
               <Route path="/revisao/:slug" element={<ProtectedRoute><RevisaoCapitulo /></ProtectedRoute>} />
               <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
+              <Route path="/historico/:id" element={<ProtectedRoute><MeetingDetail /></ProtectedRoute>} />
               <Route path="/grupos" element={<ProtectedRoute><Tenants /></ProtectedRoute>} />
               <Route path="/grupos/:id" element={<ProtectedRoute><TenantMembers /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
