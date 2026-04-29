@@ -29,24 +29,53 @@ export const useSpeech = () => {
     };
   }, []);
 
+  const chunkText = (text: string, max = 220): string[] => {
+    // Split on sentence boundaries, then re-pack into chunks <= max chars.
+    const sentences = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+|\S+$/g) ?? [text];
+    const chunks: string[] = [];
+    let buf = "";
+    for (const s of sentences) {
+      const seg = s.trim();
+      if (!seg) continue;
+      if ((buf + " " + seg).trim().length > max && buf) {
+        chunks.push(buf.trim());
+        buf = seg;
+      } else {
+        buf = (buf + " " + seg).trim();
+      }
+    }
+    if (buf) chunks.push(buf.trim());
+    return chunks;
+  };
+
   const speak = useCallback(
     (text: string, opts: TTSOptions = {}) => {
       if (!supported) return;
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "pt-BR";
-      u.rate = opts.rate ?? 0.95;
-      u.pitch = opts.pitch ?? 1;
       const voice =
         (opts.voiceURI && voices.find((v) => v.voiceURI === opts.voiceURI)) ||
         voices.find((v) => v.lang === "pt-BR") ||
         voices[0];
-      if (voice) u.voice = voice;
-      u.onstart = () => { setSpeaking(true); setPaused(false); };
-      u.onend = () => { setSpeaking(false); setPaused(false); };
-      u.onerror = () => { setSpeaking(false); setPaused(false); };
-      utterRef.current = u;
-      window.speechSynthesis.speak(u);
+      const chunks = chunkText(text);
+      let idx = 0;
+      const speakNext = () => {
+        if (idx >= chunks.length) {
+          setSpeaking(false);
+          setPaused(false);
+          return;
+        }
+        const u = new SpeechSynthesisUtterance(chunks[idx++]);
+        u.lang = "pt-BR";
+        u.rate = opts.rate ?? 0.95;
+        u.pitch = opts.pitch ?? 1;
+        if (voice) u.voice = voice;
+        u.onstart = () => { setSpeaking(true); setPaused(false); };
+        u.onend = () => speakNext();
+        u.onerror = () => speakNext();
+        utterRef.current = u;
+        window.speechSynthesis.speak(u);
+      };
+      speakNext();
     },
     [supported, voices]
   );
