@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      audio_cache: {
+        Row: {
+          chapter_slug: string
+          characters: number
+          created_at: string
+          id: string
+          public_url: string
+          storage_path: string
+          voice_id: string
+        }
+        Insert: {
+          chapter_slug: string
+          characters?: number
+          created_at?: string
+          id?: string
+          public_url: string
+          storage_path: string
+          voice_id: string
+        }
+        Update: {
+          chapter_slug?: string
+          characters?: number
+          created_at?: string
+          id?: string
+          public_url?: string
+          storage_path?: string
+          voice_id?: string
+        }
+        Relationships: []
+      }
       chapter_approvals: {
         Row: {
           approved: boolean
