@@ -84,6 +84,9 @@ export const AppLayout = () => {
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
                   <Link to="/perfil"><User className="h-4 w-4 mr-1" /> Perfil</Link>
                 </Button>
+                <Button asChild variant="ghost" size="icon" className="md:hidden" title="Instalar app" aria-label="Instalar app">
+                  <Link to="/instalar"><Smartphone className="h-4 w-4" /></Link>
+                </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sair">
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -97,12 +100,15 @@ export const AppLayout = () => {
         </div>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 pb-20 md:pb-0">
         <Outlet />
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden border-t border-border/50 bg-card/95 backdrop-blur-sm sticky bottom-0 z-40">
+      <nav
+        className="md:hidden border-t border-border/50 bg-card/95 backdrop-blur-sm fixed bottom-0 left-0 right-0 z-40"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="grid grid-cols-4">
           {navItems.map((it) => (
             <NavLink
@@ -111,7 +117,7 @@ export const AppLayout = () => {
               end={it.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-xs transition-smooth",
+                  "flex flex-col items-center gap-1 py-2.5 text-[11px] transition-smooth min-h-[56px] justify-center",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )
               }
