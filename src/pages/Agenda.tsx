@@ -120,6 +120,75 @@ const Agenda = () => {
     toast.success("Telefone salvo!");
   };
 
+  /** Gera todas as sessões dos 28 capítulos, agendadas semanalmente
+   *  no primeiro `schedules` ativo do usuário. Capítulos longos viram várias sessões. */
+  const generateAutoPlan = async () => {
+    if (!user) return;
+    const active = schedules.find((s) => s.is_active) ?? schedules[0];
+    if (!active) {
+      toast.error("Adicione primeiro um dia/horário semanal.");
+      return;
+    }
+    if (planRows.length > 0) {
+      const ok = window.confirm(
+        "Já existe um plano. Isso vai apagar o plano atual e gerar um novo. Continuar?",
+      );
+      if (!ok) return;
+      await supabase.from("session_plan").delete().eq("user_id", user.id);
+    }
+
+    let cursor = nextOccurrence(new Date(), active.day_of_week, active.time_of_day.slice(0, 5));
+    const inserts: Array<{
+      user_id: string;
+      chapter_slug: string;
+      session_index: number;
+      item_numbers: number[];
+      scheduled_for: string;
+      reading_method: string;
+    }> = [];
+
+    for (const ch of chapters) {
+      const sessions = isLongChapter(ch.slug)
+        ? suggestSessions(ch)
+        : [{ index: 1, itemNumbers: ch.nodes.filter((n) => n.type === "item").map((n: any) => n.n) }];
+      for (const sess of sessions) {
+        inserts.push({
+          user_id: user.id,
+          chapter_slug: ch.slug,
+          session_index: sess.index,
+          item_numbers: sess.itemNumbers,
+          scheduled_for: cursor.toISOString(),
+          reading_method: prefs.reading_method,
+        });
+        cursor = new Date(cursor);
+        cursor.setDate(cursor.getDate() + 7);
+      }
+    }
+    await supabase.from("session_plan").insert(inserts);
+    await reloadPlan();
+    toast.success(`${inserts.length} sessões agendadas!`);
+  };
+
+  const clearPlan = async () => {
+    if (!user) return;
+    if (!window.confirm("Apagar todo o plano de sessões?")) return;
+    await supabase.from("session_plan").delete().eq("user_id", user.id);
+    await reloadPlan();
+    toast.success("Plano removido.");
+  };
+
+  const chapterTitle = (slug: string) => {
+    const c = chapters.find((x) => x.slug === slug);
+    return c ? `${c.roman} — ${c.title}` : slug;
+  };
+  const upcoming = planRows
+    .filter((r) => !r.completed)
+    .sort(
+      (a, b) =>
+        new Date(a.scheduled_for ?? 0).getTime() - new Date(b.scheduled_for ?? 0).getTime(),
+    )
+    .slice(0, 8);
+
   if (loading) return <div className="container py-12 text-center text-muted-foreground">Carregando...</div>;
 
   return (
