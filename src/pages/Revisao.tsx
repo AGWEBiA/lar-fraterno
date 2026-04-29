@@ -276,6 +276,11 @@ const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, o
                 <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovado
               </Badge>
             )}
+            {hasAudio && (
+              <Badge variant="outline" className="border-accent/40 text-accent">
+                <Sparkles className="h-3 w-3 mr-1" /> Áudio HQ
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {audit.itemCount} itens (#1 a #{audit.expectedMax})
