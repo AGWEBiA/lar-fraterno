@@ -439,35 +439,43 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, canGener
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={generatingAudio || hasAudioForRowVoice}
-                onClick={() => handleGenerate(false)}
-                title={hasAudioForRowVoice ? "Já existe áudio gerado nesta voz" : "Gerar áudio nesta voz"}
-              >
-                {generatingAudio ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
-                ) : hasAudioForRowVoice ? (
-                  <><CheckCircle2 className="h-4 w-4" /> Pronto</>
-                ) : (
-                  <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
-                )}
-              </Button>
-              {hasAudioForRowVoice && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={generatingAudio}
-                  onClick={() => handleGenerate(true)}
-                  title="Regerar áudio (substitui o cache atual)"
-                >
-                  {generatingAudio ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <><Sparkles className="h-4 w-4" /> Regerar</>
+              {canGenerate ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={generatingAudio || hasAudioForRowVoice}
+                    onClick={() => handleGenerate(false)}
+                    title={hasAudioForRowVoice ? "Já existe áudio gerado nesta voz" : "Gerar áudio nesta voz"}
+                  >
+                    {generatingAudio ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
+                    ) : hasAudioForRowVoice ? (
+                      <><CheckCircle2 className="h-4 w-4" /> Pronto</>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
+                    )}
+                  </Button>
+                  {hasAudioForRowVoice && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={generatingAudio}
+                      onClick={() => handleGenerate(true)}
+                      title="Regerar áudio (substitui o cache atual)"
+                    >
+                      {generatingAudio ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <><Sparkles className="h-4 w-4" /> Regerar</>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                </>
+              ) : (
+                <Badge variant={hasAudioForRowVoice ? "secondary" : "outline"} className="h-9 px-3 self-center">
+                  {hasAudioForRowVoice ? "✓ Áudio disponível" : "Aguardando geração"}
+                </Badge>
               )}
             </div>
             {chapter && (
