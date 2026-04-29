@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
   Circle,
-  Loader2,
   Pause,
   Play,
   Plus,
@@ -25,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { meetingSteps } from "@/data/meeting-steps";
 import { chapters } from "@/data/chapters";
+import { buildGuide } from "@/data/meeting-guide-template";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useChapterEdits } from "@/hooks/useChapterOverrides";
 import { cn } from "@/lib/utils";
@@ -33,15 +33,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChapterApprovals } from "@/hooks/useChapterApprovals";
 import { toast } from "sonner";
 
-interface MeetingGuide {
-  opening_prayer: string;
-  reading_intro: string;
-  commentary_points: { title: string; text: string }[];
-  reflection_questions: string[];
-  vibrations_focus: string;
-  closing_prayer: string;
-}
-
 const Reuniao = () => {
   const { user } = useAuth();
   const { isApproved, loading: approvalsLoading } = useChapterApprovals();
@@ -49,9 +40,6 @@ const Reuniao = () => {
   const [done, setDone] = useState<Set<string>>(new Set());
   const [chapterIdx, setChapterIdx] = useState(0);
   const tts = useSpeech();
-  const [guide, setGuide] = useState<MeetingGuide | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [autoTried, setAutoTried] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [participants, setParticipants] = useState<string[]>([]);
   const [participantInput, setParticipantInput] = useState("");
@@ -66,21 +54,11 @@ const Reuniao = () => {
   const progress = (done.size / meetingSteps.length) * 100;
   const step = meetingSteps[current];
 
-  // Reset cached guide when chapter changes; load from DB if exists.
-  useEffect(() => {
-    setGuide(null);
-    setAutoTried(false);
-    if (!user) return;
-    supabase
-      .from("meeting_guides")
-      .select("guide")
-      .eq("user_id", user.id)
-      .eq("chapter_slug", baseChapter.slug)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.guide) setGuide(data.guide as unknown as MeetingGuide);
-      });
-  }, [baseChapter.slug, user]);
+  // Roteiro fixo baseado em template + dados do capítulo (sem IA).
+  const guide = useMemo(
+    () => buildGuide({ title: chapter.title, summary: chapter.summary }),
+    [chapter.title, chapter.summary],
+  );
 
   const markDone = (id: string) => setDone((s) => new Set(s).add(id));
 
@@ -135,82 +113,24 @@ const Reuniao = () => {
     setParticipantInput("");
   };
 
-  const generateGuide = async (silent = false) => {
-    if (!approved) {
-      if (!silent) toast.error("Aprove o capítulo na revisão antes de gerar o roteiro.");
-      return;
-    }
-    setGenerating(true);
-    try {
-      const items = chapter.nodes.filter(
-        (n): n is Extract<typeof chapter.nodes[number], { type: "item" }> => n.type === "item",
-      );
-      const excerpt = items
-        .slice(0, 3)
-        .map((it) => `${it.n}. ${it.paragraphs[0]?.slice(0, 400) ?? ""}`)
-        .join("\n");
-
-      const { data, error } = await supabase.functions.invoke("gerar-roteiro", {
-        body: {
-          chapterSlug: baseChapter.slug,
-          chapterTitle: chapter.title,
-          chapterSummary: chapter.summary,
-          excerpt,
-        },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const generated = (data as any)?.guide as MeetingGuide;
-      setGuide(generated);
-      if (user) {
-        await supabase.from("meeting_guides").upsert(
-          [{
-            user_id: user.id,
-            chapter_slug: baseChapter.slug,
-            guide: generated as any,
-            model: (data as any).model ?? null,
-          }],
-          { onConflict: "user_id,chapter_slug" },
-        );
-      }
-      if (!silent) toast.success("Roteiro gerado.");
-    } catch (e: any) {
-      console.error(e);
-      if (!silent) toast.error(e?.message ?? "Falha ao gerar roteiro.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Auto-generate the guide once when chapter is approved and no cached guide exists.
-  useEffect(() => {
-    if (autoTried) return;
-    if (!user || !approved || guide || generating) return;
-    setAutoTried(true);
-    generateGuide(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, approved, guide, generating, autoTried, baseChapter.slug]);
-
   // Decide what text to speak / show in each step.
   const stepContent = (() => {
     switch (step.id) {
       case "prece-inicial":
-        return guide?.opening_prayer ?? null;
+        return guide.opening_prayer;
       case "leitura":
         return null; // handled below with full chapter
       case "comentarios":
-        return guide
-          ? [
-              ...guide.commentary_points.map((p) => `• ${p.title}: ${p.text}`),
-              "",
-              "Perguntas para reflexão:",
-              ...guide.reflection_questions.map((q) => `— ${q}`),
-            ].join("\n")
-          : null;
+        return [
+          ...guide.commentary_points.map((p) => `• ${p.title}: ${p.text}`),
+          "",
+          "Perguntas para reflexão:",
+          ...guide.reflection_questions.map((q) => `— ${q}`),
+        ].join("\n");
       case "vibracoes":
-        return guide?.vibrations_focus ?? null;
+        return guide.vibrations_focus;
       case "prece-final":
-        return guide?.closing_prayer ?? null;
+        return guide.closing_prayer;
       default:
         return null;
     }
@@ -219,7 +139,7 @@ const Reuniao = () => {
   const speakStep = () => {
     if (!approved) return;
     if (step.id === "leitura") {
-      const text = `${chapter.title}. ${guide?.reading_intro ?? ""} ${chapter.paragraphs.join(" ")}`;
+      const text = `${chapter.title}. ${guide.reading_intro} ${chapter.paragraphs.join(" ")}`;
       tts.speak(text);
       return;
     }
@@ -279,29 +199,6 @@ const Reuniao = () => {
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-2 items-center border-t border-border/50 pt-3">
-          <Button
-            onClick={() => generateGuide(false)}
-            disabled={generating || !approved}
-            variant={guide ? "outline" : "hero"}
-            size="sm"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Gerando...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> {guide ? "Gerar novamente" : "Gerar roteiro com IA"}
-              </>
-            )}
-          </Button>
-          {guide && (
-            <span className="text-xs text-muted-foreground">
-              Roteiro com prece, comentários e vibrações pronto.
-            </span>
-          )}
-        </div>
       </Card>
 
       <div className="mb-6">
@@ -454,11 +351,6 @@ const Reuniao = () => {
                 )
               )}
 
-              {!stepContent && step.id !== "leitura" && (
-                <p className="text-sm text-muted-foreground italic">
-                  Gere o roteiro acima para ver sugestões personalizadas para este passo.
-                </p>
-              )}
 
               {!tts.supported && (
                 <p className="text-xs text-muted-foreground mt-3">Seu navegador não suporta leitura por voz.</p>
