@@ -36,9 +36,9 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
-              <Route path="/reuniao" element={<Reuniao />} />
-              <Route path="/biblioteca" element={<Biblioteca />} />
-              <Route path="/biblioteca/:slug" element={<Leitor />} />
+              <Route path="/reuniao" element={<ProtectedRoute><Reuniao /></ProtectedRoute>} />
+              <Route path="/biblioteca" element={<ProtectedRoute><Biblioteca /></ProtectedRoute>} />
+              <Route path="/biblioteca/:slug" element={<ProtectedRoute><Leitor /></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
               <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
               <Route path="/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
@@ -48,7 +48,7 @@ const App = () => (
               <Route path="/grupos" element={<ProtectedRoute><Tenants /></ProtectedRoute>} />
               <Route path="/grupos/:id" element={<ProtectedRoute><TenantMembers /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="/instalar" element={<Install />} />
+              <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
