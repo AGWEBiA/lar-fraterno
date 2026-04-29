@@ -123,16 +123,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2) gerar em paralelo (com stitching para manter prosódia entre chunks).
-    // Sequencial estourava o limite de 150s do edge runtime em capítulos longos.
+    // 2) gerar com concorrência limitada (ElevenLabs: máx 3 simultâneas no plano atual; usamos 2 p/ margem).
     const chunks = splitForTTS(body.text);
-    const audios = await Promise.all(
-      chunks.map((chunk, i) => {
-        const prev = i > 0 ? chunks[i - 1].slice(-300) : undefined;
-        const next = i < chunks.length - 1 ? chunks[i + 1].slice(0, 300) : undefined;
-        return synth(chunk, voiceId, prev, next);
-      }),
-    );
+    const CONCURRENCY = 2;
+    const audios: ArrayBuffer[] = new Array(chunks.length);
+    for (let start = 0; start < chunks.length; start += CONCURRENCY) {
+      const slice = chunks.slice(start, start + CONCURRENCY);
+      const results = await Promise.all(
+        slice.map((chunk, j) => {
+          const i = start + j;
+          const prev = i > 0 ? chunks[i - 1].slice(-300) : undefined;
+          const next = i < chunks.length - 1 ? chunks[i + 1].slice(0, 300) : undefined;
+          return synth(chunk, voiceId, prev, next);
+        }),
+      );
+      results.forEach((buf, j) => { audios[start + j] = buf; });
+    }
     const combined = concat(audios);
 
     // 3) upload no storage
