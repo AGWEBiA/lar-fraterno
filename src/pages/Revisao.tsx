@@ -275,7 +275,7 @@ interface RowProps {
   availableVoices: Set<string>;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
-  onGenerateAudio: (voiceId: string) => Promise<boolean> | void;
+  onGenerateAudio: (voiceId: string, force?: boolean) => Promise<boolean> | void;
 }
 
 const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
