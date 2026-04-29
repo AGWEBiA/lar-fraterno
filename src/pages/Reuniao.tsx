@@ -139,7 +139,7 @@ const Reuniao = () => {
   const speakStep = () => {
     if (!approved) return;
     if (step.id === "leitura") {
-      const text = `${chapter.title}. ${guide?.reading_intro ?? ""} ${chapter.paragraphs.join(" ")}`;
+      const text = `${chapter.title}. ${guide.reading_intro} ${chapter.paragraphs.join(" ")}`;
       tts.speak(text);
       return;
     }
