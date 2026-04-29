@@ -5,12 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { chapterBySlug, chapters } from "@/data/chapters";
+import { VOICES, DEFAULT_VOICE_ID } from "@/data/voices";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useItemProgress } from "@/hooks/useItemProgress";
 import { useChapterAudio } from "@/hooks/useChapterAudio";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ensureNotificationPermission } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -20,9 +23,16 @@ const Leitor = () => {
   const tts = useSpeech();
   const chapter = slug ? chapterBySlug(slug) : null;
   const { rows, toggleRead, toggleBookmark, setNote } = useItemProgress(chapter?.slug);
-  const audio = useChapterAudio(chapter);
+  const [voiceId, setVoiceId] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("ttsVoiceId") || DEFAULT_VOICE_ID : DEFAULT_VOICE_ID,
+  );
+  const audio = useChapterAudio(chapter, voiceId);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [draftNote, setDraftNote] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    localStorage.setItem("ttsVoiceId", voiceId);
+  }, [voiceId]);
 
   // Para qualquer áudio (TTS do navegador + player HQ) ao trocar de capítulo
   // ou ao desmontar a página.
