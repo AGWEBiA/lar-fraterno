@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
-import { BookOpen, ChevronRight, Search } from "lucide-react";
+import { BookOpen, ChevronRight, Search, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { chapters } from "@/data/chapters";
+import { useChapterApprovals } from "@/hooks/useChapterApprovals";
+import { useAuth } from "@/hooks/useAuth";
 import { useMemo, useState } from "react";
 
 const Biblioteca = () => {
