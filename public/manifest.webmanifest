@@ -1,0 +1,32 @@
+{
+  "name": "Evangelho no Lar",
+  "short_name": "Evangelho",
+  "description": "Estudo semanal em família com roteiro guiado, leitura em áudio do Evangelho Segundo o Espiritismo, agenda e lembretes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f3ec",
+  "theme_color": "#1f3559",
+  "lang": "pt-BR",
+  "categories": ["lifestyle", "books", "education"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Reunião guiada", "url": "/reuniao", "short_name": "Reunião" },
+    { "name": "Biblioteca", "url": "/biblioteca", "short_name": "Evangelho" },
+    { "name": "Agenda", "url": "/agenda", "short_name": "Agenda" }
+  ]
+}

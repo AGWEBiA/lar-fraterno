@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, Building2, Calendar, History, Home, LogOut, ScrollText, ShieldCheck, Sparkles, User } from "lucide-react";
+import { BookOpen, Building2, Calendar, History, Home, LogOut, ScrollText, ShieldCheck, Smartphone, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -27,16 +27,16 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-soft flex flex-col">
+    <div className="min-h-screen bg-gradient-soft flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container flex h-16 items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-9 w-9 rounded-full bg-gradient-gold flex items-center justify-center shadow-soft transition-smooth group-hover:shadow-glow">
+        <div className="container flex h-16 items-center justify-between gap-2 md:gap-4">
+          <Link to="/" className="flex items-center gap-2 group min-w-0">
+            <div className="h-9 w-9 rounded-full bg-gradient-gold flex items-center justify-center shadow-soft transition-smooth group-hover:shadow-glow shrink-0">
               <ScrollText className="h-5 w-5 text-primary" />
             </div>
-            <div className="leading-tight">
-              <p className="font-serif text-lg font-semibold text-primary">Evangelho no Lar</p>
-              <p className="text-[11px] text-muted-foreground -mt-0.5">Estudo & Harmonia</p>
+            <div className="leading-tight min-w-0">
+              <p className="font-serif text-base sm:text-lg font-semibold text-primary truncate">Evangelho no Lar</p>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground -mt-0.5 hidden xs:block">Estudo & Harmonia</p>
             </div>
           </Link>
 
@@ -84,6 +84,9 @@ export const AppLayout = () => {
                 <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
                   <Link to="/perfil"><User className="h-4 w-4 mr-1" /> Perfil</Link>
                 </Button>
+                <Button asChild variant="ghost" size="icon" className="md:hidden" title="Instalar app" aria-label="Instalar app">
+                  <Link to="/instalar"><Smartphone className="h-4 w-4" /></Link>
+                </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sair">
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -97,12 +100,15 @@ export const AppLayout = () => {
         </div>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 pb-20 md:pb-0">
         <Outlet />
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden border-t border-border/50 bg-card/95 backdrop-blur-sm sticky bottom-0 z-40">
+      <nav
+        className="md:hidden border-t border-border/50 bg-card/95 backdrop-blur-sm fixed bottom-0 left-0 right-0 z-40"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="grid grid-cols-4">
           {navItems.map((it) => (
             <NavLink
@@ -111,7 +117,7 @@ export const AppLayout = () => {
               end={it.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-xs transition-smooth",
+                  "flex flex-col items-center gap-1 py-2.5 text-[11px] transition-smooth min-h-[56px] justify-center",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )
               }
