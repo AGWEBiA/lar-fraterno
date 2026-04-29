@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { auditAllChapters, type ChapterAudit } from "@/lib/chapter-audit";
-import { chapterBySlug } from "@/data/chapters";
+import { chapterBySlug, chapters as ALL_CHAPTERS } from "@/data/chapters";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -17,6 +18,13 @@ const Revisao = () => {
   const [approvals, setApprovals] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [audioCache, setAudioCache] = useState<Set<string>>(new Set());
+  const [batch, setBatch] = useState<{ running: boolean; done: number; total: number; current: string | null }>({
+    running: false,
+    done: 0,
+    total: 0,
+    current: null,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -38,6 +46,47 @@ const Revisao = () => {
         setLoading(false);
       });
   }, [user]);
+
+  // Carrega lista de capítulos com áudio já gerado.
+  useEffect(() => {
+    supabase
+      .from("audio_cache")
+      .select("chapter_slug")
+      .then(({ data }) => {
+        if (data) setAudioCache(new Set(data.map((r) => r.chapter_slug)));
+      });
+  }, [batch.done]);
+
+  const generateAudio = async (slug: string) => {
+    const ch = chapterBySlug(slug);
+    if (!ch) return false;
+    const text = `${ch.title}. ${ch.paragraphs.join(" ")}`;
+    const { data, error } = await supabase.functions.invoke("tts-chapter", {
+      body: { slug, text },
+    });
+    if (error || data?.error) {
+      toast.error(`Falha em ${ch.title}: ${data?.error ?? error?.message ?? "erro"}`);
+      return false;
+    }
+    setAudioCache((prev) => new Set(prev).add(slug));
+    return true;
+  };
+
+  const generateAll = async () => {
+    const pending = ALL_CHAPTERS.filter((c) => !audioCache.has(c.slug));
+    if (pending.length === 0) {
+      toast.success("Todos os capítulos já têm áudio gerado!");
+      return;
+    }
+    setBatch({ running: true, done: 0, total: pending.length, current: null });
+    for (let i = 0; i < pending.length; i++) {
+      const ch = pending[i];
+      setBatch((b) => ({ ...b, current: ch.title, done: i }));
+      await generateAudio(ch.slug);
+    }
+    setBatch({ running: false, done: pending.length, total: pending.length, current: null });
+    toast.success("Pré-geração concluída!");
+  };
 
   const toggleApproval = async (slug: string, approved: boolean) => {
     if (!user) return;
