@@ -199,29 +199,6 @@ const Reuniao = () => {
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-2 items-center border-t border-border/50 pt-3">
-          <Button
-            onClick={() => generateGuide(false)}
-            disabled={generating || !approved}
-            variant={guide ? "outline" : "hero"}
-            size="sm"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Gerando...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> {guide ? "Gerar novamente" : "Gerar roteiro com IA"}
-              </>
-            )}
-          </Button>
-          {guide && (
-            <span className="text-xs text-muted-foreground">
-              Roteiro com prece, comentários e vibrações pronto.
-            </span>
-          )}
-        </div>
       </Card>
 
       <div className="mb-6">
