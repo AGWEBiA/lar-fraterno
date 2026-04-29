@@ -83,9 +83,33 @@ const Leitor = () => {
         </Card>
 
         <div className="reading-prose">
-          {chapter.paragraphs.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
+          {chapter.nodes.map((node, i) => {
+            if (node.type === "heading") {
+              return (
+                <h2
+                  key={i}
+                  className="font-serif text-2xl md:text-3xl text-primary mt-8 mb-3 not-prose"
+                >
+                  {node.text}
+                </h2>
+              );
+            }
+            if (node.type === "item") {
+              return (
+                <div key={i} className="my-5">
+                  {node.paragraphs.map((p, j) => (
+                    <p key={j}>
+                      {j === 0 && (
+                        <span className="font-semibold text-primary mr-1">{node.n}.</span>
+                      )}
+                      {p}
+                    </p>
+                  ))}
+                </div>
+              );
+            }
+            return <p key={i}>{node.text}</p>;
+          })}
         </div>
       </article>
 
