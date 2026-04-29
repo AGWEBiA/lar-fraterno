@@ -220,12 +220,21 @@ interface RowProps {
   approved: boolean;
   disabled: boolean;
   isOpen: boolean;
+  hasAudio: boolean;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
+  onGenerateAudio: () => Promise<boolean> | void;
 }
 
-const AuditRow = ({ audit, approved, disabled, isOpen, onToggleOpen, onApprove }: RowProps) => {
+const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
   const chapter = chapterBySlug(audit.slug);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+
+  const handleGenerate = async () => {
+    setGeneratingAudio(true);
+    await onGenerateAudio();
+    setGeneratingAudio(false);
+  };
 
   return (
     <Card
