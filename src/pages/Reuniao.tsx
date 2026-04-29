@@ -113,82 +113,24 @@ const Reuniao = () => {
     setParticipantInput("");
   };
 
-  const generateGuide = async (silent = false) => {
-    if (!approved) {
-      if (!silent) toast.error("Aprove o capítulo na revisão antes de gerar o roteiro.");
-      return;
-    }
-    setGenerating(true);
-    try {
-      const items = chapter.nodes.filter(
-        (n): n is Extract<typeof chapter.nodes[number], { type: "item" }> => n.type === "item",
-      );
-      const excerpt = items
-        .slice(0, 3)
-        .map((it) => `${it.n}. ${it.paragraphs[0]?.slice(0, 400) ?? ""}`)
-        .join("\n");
-
-      const { data, error } = await supabase.functions.invoke("gerar-roteiro", {
-        body: {
-          chapterSlug: baseChapter.slug,
-          chapterTitle: chapter.title,
-          chapterSummary: chapter.summary,
-          excerpt,
-        },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const generated = (data as any)?.guide as MeetingGuide;
-      setGuide(generated);
-      if (user) {
-        await supabase.from("meeting_guides").upsert(
-          [{
-            user_id: user.id,
-            chapter_slug: baseChapter.slug,
-            guide: generated as any,
-            model: (data as any).model ?? null,
-          }],
-          { onConflict: "user_id,chapter_slug" },
-        );
-      }
-      if (!silent) toast.success("Roteiro gerado.");
-    } catch (e: any) {
-      console.error(e);
-      if (!silent) toast.error(e?.message ?? "Falha ao gerar roteiro.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Auto-generate the guide once when chapter is approved and no cached guide exists.
-  useEffect(() => {
-    if (autoTried) return;
-    if (!user || !approved || guide || generating) return;
-    setAutoTried(true);
-    generateGuide(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, approved, guide, generating, autoTried, baseChapter.slug]);
-
   // Decide what text to speak / show in each step.
   const stepContent = (() => {
     switch (step.id) {
       case "prece-inicial":
-        return guide?.opening_prayer ?? null;
+        return guide.opening_prayer;
       case "leitura":
         return null; // handled below with full chapter
       case "comentarios":
-        return guide
-          ? [
-              ...guide.commentary_points.map((p) => `• ${p.title}: ${p.text}`),
-              "",
-              "Perguntas para reflexão:",
-              ...guide.reflection_questions.map((q) => `— ${q}`),
-            ].join("\n")
-          : null;
+        return [
+          ...guide.commentary_points.map((p) => `• ${p.title}: ${p.text}`),
+          "",
+          "Perguntas para reflexão:",
+          ...guide.reflection_questions.map((q) => `— ${q}`),
+        ].join("\n");
       case "vibracoes":
-        return guide?.vibrations_focus ?? null;
+        return guide.vibrations_focus;
       case "prece-final":
-        return guide?.closing_prayer ?? null;
+        return guide.closing_prayer;
       default:
         return null;
     }
