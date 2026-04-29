@@ -116,7 +116,7 @@ const Leitor = () => {
 
         <Card className="p-3 mb-8 flex flex-col gap-2 bg-card/80 border-border/50 shadow-soft sticky top-20 z-30">
           {/* Seletor de voz */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">
               Voz
             </span>
@@ -125,14 +125,26 @@ const Leitor = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {VOICES.map((v) => (
-                  <SelectItem key={v.id} value={v.id} className="text-xs">
-                    <span className="font-medium">{v.name}</span>{" "}
-                    <span className="text-muted-foreground">— {v.description}</span>
-                  </SelectItem>
-                ))}
+                {VOICES.map((v) => {
+                  const ready = availableVoices.has(v.id);
+                  const disabled = !isAdminMaster && !ready;
+                  return (
+                    <SelectItem key={v.id} value={v.id} className="text-xs" disabled={disabled}>
+                      <span className="font-medium">{v.name}</span>{" "}
+                      <span className="text-muted-foreground">— {v.description}</span>{" "}
+                      {ready ? (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">• pronto</span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">• indisponível</span>
+                      )}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            <span className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-0.5">
+              Áudio em beta
+            </span>
           </div>
 
           {/* Áudio em alta qualidade (ElevenLabs) */}
@@ -146,7 +158,7 @@ const Leitor = () => {
                 </span>
               )}
             </div>
-          ) : (
+          ) : isAdminMaster ? (
             <Button
               onClick={async () => {
                 await ensureNotificationPermission();
@@ -170,10 +182,15 @@ const Leitor = () => {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Gerar áudio em alta qualidade
+                  <Sparkles className="h-4 w-4" /> Gerar áudio em alta qualidade (admin)
                 </>
               )}
             </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Esta voz ainda não foi gerada. Use a leitura por voz do navegador abaixo, ou escolha uma voz marcada como "pronto".
+            </p>
           )}
           {audio.error && (
             <p className="text-xs text-destructive">Erro: {audio.error}</p>
