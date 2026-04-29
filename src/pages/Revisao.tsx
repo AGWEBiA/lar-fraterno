@@ -151,6 +151,51 @@ const Revisao = () => {
         </Card>
       )}
 
+      {/* Painel de pré-geração de áudio */}
+      <Card className="p-5 mb-6 bg-card/80 border-border/50">
+        <div className="flex items-start gap-3 flex-wrap">
+          <Sparkles className="h-5 w-5 text-accent mt-0.5" />
+          <div className="flex-1 min-w-[200px]">
+            <p className="font-serif text-lg text-primary">Áudio em alta qualidade</p>
+            <p className="text-xs text-muted-foreground">
+              {audioCache.size} de {ALL_CHAPTERS.length} capítulos com áudio HQ pronto.
+              Voz natural via ElevenLabs (PT-BR), salva em cache para reuso.
+            </p>
+          </div>
+          <Button
+            variant="hero"
+            size="sm"
+            onClick={generateAll}
+            disabled={batch.running || audioCache.size === ALL_CHAPTERS.length}
+          >
+            {batch.running ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Gerando…
+              </>
+            ) : audioCache.size === ALL_CHAPTERS.length ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" /> Tudo pronto
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" /> Pré-gerar áudio dos {ALL_CHAPTERS.length - audioCache.size} restantes
+              </>
+            )}
+          </Button>
+        </div>
+        {batch.running && (
+          <div className="mt-4 space-y-2">
+            <Progress value={(batch.done / batch.total) * 100} />
+            <p className="text-xs text-muted-foreground">
+              {batch.done}/{batch.total} — gerando: {batch.current ?? "…"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Pode demorar alguns minutos. Não feche esta aba.
+            </p>
+          </div>
+        )}
+      </Card>
+
       <div className="space-y-3">
         {audits.map((a) => (
           <AuditRow
@@ -159,8 +204,10 @@ const Revisao = () => {
             approved={!!approvals[a.slug]}
             disabled={!user || loading}
             isOpen={open === a.slug}
+            hasAudio={audioCache.has(a.slug)}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
+            onGenerateAudio={() => generateAudio(a.slug)}
           />
         ))}
       </div>
