@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       app_notifications: {
         Row: {
           body: string | null
@@ -47,6 +68,54 @@ export type Database = {
         }
         Relationships: []
       }
+      audio_batch_runs: {
+        Row: {
+          chapter_slugs: string[]
+          failed: number
+          finished_at: string | null
+          id: string
+          max_chars_per_chapter: number
+          notes: string | null
+          started_at: string
+          status: string
+          succeeded: number
+          total_characters: number
+          triggered_by: string
+          voice_id: string
+          voice_label: string | null
+        }
+        Insert: {
+          chapter_slugs?: string[]
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          max_chars_per_chapter?: number
+          notes?: string | null
+          started_at?: string
+          status?: string
+          succeeded?: number
+          total_characters?: number
+          triggered_by: string
+          voice_id: string
+          voice_label?: string | null
+        }
+        Update: {
+          chapter_slugs?: string[]
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          max_chars_per_chapter?: number
+          notes?: string | null
+          started_at?: string
+          status?: string
+          succeeded?: number
+          total_characters?: number
+          triggered_by?: string
+          voice_id?: string
+          voice_label?: string | null
+        }
+        Relationships: []
+      }
       audio_cache: {
         Row: {
           chapter_slug: string
@@ -73,6 +142,39 @@ export type Database = {
           id?: string
           public_url?: string
           storage_path?: string
+          voice_id?: string
+        }
+        Relationships: []
+      }
+      audio_chunk_checkpoints: {
+        Row: {
+          chapter_slug: string
+          characters: number
+          chunk_index: number
+          created_at: string
+          id: string
+          storage_path: string
+          total_chunks: number
+          voice_id: string
+        }
+        Insert: {
+          chapter_slug: string
+          characters?: number
+          chunk_index: number
+          created_at?: string
+          id?: string
+          storage_path: string
+          total_chunks: number
+          voice_id: string
+        }
+        Update: {
+          chapter_slug?: string
+          characters?: number
+          chunk_index?: number
+          created_at?: string
+          id?: string
+          storage_path?: string
+          total_chunks?: number
           voice_id?: string
         }
         Relationships: []
@@ -122,6 +224,36 @@ export type Database = {
           user_id?: string
           voice_id?: string
           voice_label?: string | null
+        }
+        Relationships: []
+      }
+      audio_job_audit: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          job_id: string
+          notes: string | null
+          performed_by: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          performed_by: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          performed_by?: string
         }
         Relationships: []
       }
@@ -302,6 +434,45 @@ export type Database = {
           read_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      meeting_audio_log: {
+        Row: {
+          audio_status: string
+          chapter_slug: string
+          characters: number | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          job_id: string | null
+          meeting_id: string
+          user_id: string
+          voice_id: string | null
+        }
+        Insert: {
+          audio_status?: string
+          chapter_slug: string
+          characters?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          job_id?: string | null
+          meeting_id: string
+          user_id: string
+          voice_id?: string | null
+        }
+        Update: {
+          audio_status?: string
+          chapter_slug?: string
+          characters?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          job_id?: string | null
+          meeting_id?: string
+          user_id?: string
+          voice_id?: string | null
         }
         Relationships: []
       }
@@ -854,6 +1025,11 @@ export type Database = {
     }
     Functions: {
       accept_tenant_invite: { Args: { _code: string }; Returns: string }
+      admin_close_stuck_job: {
+        Args: { _job_id: string; _reason: string }
+        Returns: undefined
+      }
+      admin_revoke_sessions: { Args: { _user_id: string }; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       has_role: {
         Args: {
