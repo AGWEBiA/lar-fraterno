@@ -59,6 +59,7 @@ const Agenda = () => {
   const [day, setDay] = useState("3");
   const [time, setTime] = useState("20:00");
   const [loading, setLoading] = useState(true);
+  const { rows: planRows, create: createPlan, remove: removePlan, reload: reloadPlan } = useSessionPlan();
 
   const load = async () => {
     if (!user) return;
