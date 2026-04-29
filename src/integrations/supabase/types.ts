@@ -44,6 +44,117 @@ export type Database = {
         }
         Relationships: []
       }
+      chapter_item_overrides: {
+        Row: {
+          chapter_slug: string
+          created_at: string
+          heading_text: string | null
+          id: string
+          item_number: number | null
+          node_index: number
+          override_type: string | null
+          paragraph_text: string | null
+          paragraphs: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_slug: string
+          created_at?: string
+          heading_text?: string | null
+          id?: string
+          item_number?: number | null
+          node_index: number
+          override_type?: string | null
+          paragraph_text?: string | null
+          paragraphs?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_slug?: string
+          created_at?: string
+          heading_text?: string | null
+          id?: string
+          item_number?: number | null
+          node_index?: number
+          override_type?: string | null
+          paragraph_text?: string | null
+          paragraphs?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chapter_node_inserts: {
+        Row: {
+          after_node_index: number
+          chapter_slug: string
+          created_at: string
+          heading_text: string | null
+          id: string
+          item_number: number | null
+          node_type: string
+          paragraph_text: string | null
+          paragraphs: string[] | null
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          after_node_index: number
+          chapter_slug: string
+          created_at?: string
+          heading_text?: string | null
+          id?: string
+          item_number?: number | null
+          node_type: string
+          paragraph_text?: string | null
+          paragraphs?: string[] | null
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          after_node_index?: number
+          chapter_slug?: string
+          created_at?: string
+          heading_text?: string | null
+          id?: string
+          item_number?: number | null
+          node_type?: string
+          paragraph_text?: string | null
+          paragraphs?: string[] | null
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chapter_node_removals: {
+        Row: {
+          chapter_slug: string
+          created_at: string
+          id: string
+          node_index: number
+          user_id: string
+        }
+        Insert: {
+          chapter_slug: string
+          created_at?: string
+          id?: string
+          node_index: number
+          user_id: string
+        }
+        Update: {
+          chapter_slug?: string
+          created_at?: string
+          id?: string
+          node_index?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       meeting_guides: {
         Row: {
           chapter_slug: string
@@ -82,6 +193,8 @@ export type Database = {
           id: string
           notes: string | null
           participants: number | null
+          participants_list: string[] | null
+          title: string | null
           user_id: string
         }
         Insert: {
@@ -91,6 +204,8 @@ export type Database = {
           id?: string
           notes?: string | null
           participants?: number | null
+          participants_list?: string[] | null
+          title?: string | null
           user_id: string
         }
         Update: {
@@ -100,6 +215,8 @@ export type Database = {
           id?: string
           notes?: string | null
           participants?: number | null
+          participants_list?: string[] | null
+          title?: string | null
           user_id?: string
         }
         Relationships: []
@@ -107,30 +224,57 @@ export type Database = {
       notification_preferences: {
         Row: {
           created_at: string
+          email_before: boolean
           email_enabled: boolean
+          email_end: boolean
+          email_start: boolean
           minutes_before: number
+          push_before: boolean
           push_enabled: boolean
+          push_end: boolean
+          push_start: boolean
           updated_at: string
           user_id: string
+          whatsapp_before: boolean
           whatsapp_enabled: boolean
+          whatsapp_end: boolean
+          whatsapp_start: boolean
         }
         Insert: {
           created_at?: string
+          email_before?: boolean
           email_enabled?: boolean
+          email_end?: boolean
+          email_start?: boolean
           minutes_before?: number
+          push_before?: boolean
           push_enabled?: boolean
+          push_end?: boolean
+          push_start?: boolean
           updated_at?: string
           user_id: string
+          whatsapp_before?: boolean
           whatsapp_enabled?: boolean
+          whatsapp_end?: boolean
+          whatsapp_start?: boolean
         }
         Update: {
           created_at?: string
+          email_before?: boolean
           email_enabled?: boolean
+          email_end?: boolean
+          email_start?: boolean
           minutes_before?: number
+          push_before?: boolean
           push_enabled?: boolean
+          push_end?: boolean
+          push_start?: boolean
           updated_at?: string
           user_id?: string
+          whatsapp_before?: boolean
           whatsapp_enabled?: boolean
+          whatsapp_end?: boolean
+          whatsapp_start?: boolean
         }
         Relationships: []
       }

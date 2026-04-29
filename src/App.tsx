@@ -14,6 +14,8 @@ import Leitor from "./pages/Leitor";
 import Agenda from "./pages/Agenda";
 import Perfil from "./pages/Perfil";
 import Revisao from "./pages/Revisao";
+import RevisaoCapitulo from "./pages/RevisaoCapitulo";
+import Historico from "./pages/Historico";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
               <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
               <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
               <Route path="/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
+              <Route path="/revisao/:slug" element={<ProtectedRoute><RevisaoCapitulo /></ProtectedRoute>} />
+              <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

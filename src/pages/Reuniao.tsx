@@ -8,18 +8,25 @@ import {
   Loader2,
   Pause,
   Play,
+  Plus,
   ShieldAlert,
   Sparkles,
   Square,
   Volume2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { meetingSteps } from "@/data/meeting-steps";
 import { chapters } from "@/data/chapters";
 import { useSpeech } from "@/hooks/useSpeech";
+import { useChapterEdits } from "@/hooks/useChapterOverrides";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,29 +48,39 @@ const Reuniao = () => {
   const [current, setCurrent] = useState(0);
   const [done, setDone] = useState<Set<string>>(new Set());
   const [chapterIdx, setChapterIdx] = useState(0);
+  const tts = useSpeech();
   const [guide, setGuide] = useState<MeetingGuide | null>(null);
   const [generating, setGenerating] = useState(false);
-  const tts = useSpeech();
+  const [autoTried, setAutoTried] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [participantInput, setParticipantInput] = useState("");
+  const [notes, setNotes] = useState("");
+  const [meetingTitle, setMeetingTitle] = useState("");
+
+  const baseChapter = chapters[chapterIdx];
+  const { chapter: editedChapter } = useChapterEdits(baseChapter.slug);
+  const chapter = editedChapter ?? baseChapter;
+  const approved = isApproved(baseChapter.slug);
 
   const progress = (done.size / meetingSteps.length) * 100;
   const step = meetingSteps[current];
-  const chapter = chapters[chapterIdx];
-  const approved = isApproved(chapter.slug);
 
   // Reset cached guide when chapter changes; load from DB if exists.
   useEffect(() => {
     setGuide(null);
+    setAutoTried(false);
     if (!user) return;
     supabase
       .from("meeting_guides")
       .select("guide")
       .eq("user_id", user.id)
-      .eq("chapter_slug", chapter.slug)
+      .eq("chapter_slug", baseChapter.slug)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.guide) setGuide(data.guide as unknown as MeetingGuide);
       });
-  }, [chapter.slug, user]);
+  }, [baseChapter.slug, user]);
 
   const markDone = (id: string) => setDone((s) => new Set(s).add(id));
 
@@ -73,37 +90,58 @@ const Reuniao = () => {
     tts.stop();
   };
 
-  const finish = async () => {
+  const finish = () => {
     markDone(step.id);
     tts.stop();
-    if (user) {
-      await supabase.from("meeting_history").insert({
-        user_id: user.id,
-        chapter_slug: chapter.slug,
-      });
-      await supabase.from("reading_progress").upsert(
-        {
-          user_id: user.id,
-          chapter_slug: chapter.slug,
-          completed: true,
-          last_read_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,chapter_slug" },
-      );
-      toast.success("Reunião registrada com gratidão.");
-    } else {
-      toast.success("Reunião concluída! Crie uma conta para salvar seu progresso.");
-    }
+    setMeetingTitle(chapter.title);
+    setFinishOpen(true);
   };
 
-  const generateGuide = async () => {
+  const addParticipant = () => {
+    const v = participantInput.trim();
+    if (!v || participants.includes(v)) return;
+    setParticipants([...participants, v]);
+    setParticipantInput("");
+  };
+
+  const saveMeeting = async () => {
+    if (!user) {
+      toast.success("Reunião concluída! Crie uma conta para salvar seu progresso.");
+      setFinishOpen(false);
+      return;
+    }
+    await supabase.from("meeting_history").insert({
+      user_id: user.id,
+      chapter_slug: baseChapter.slug,
+      title: meetingTitle || chapter.title,
+      participants_list: participants,
+      participants: participants.length || 1,
+      notes,
+      held_at: new Date().toISOString(),
+    });
+    await supabase.from("reading_progress").upsert(
+      {
+        user_id: user.id,
+        chapter_slug: baseChapter.slug,
+        completed: true,
+        last_read_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,chapter_slug" },
+    );
+    toast.success("Reunião salva no histórico.");
+    setFinishOpen(false);
+    setNotes("");
+    setParticipants([]);
+    setParticipantInput("");
+  };
+
+  const generateGuide = async (silent = false) => {
     if (!approved) {
-      toast.error("Aprove o capítulo na revisão antes de gerar o roteiro.");
+      if (!silent) toast.error("Aprove o capítulo na revisão antes de gerar o roteiro.");
       return;
     }
     setGenerating(true);
     try {
-      // Build a concise excerpt: first 3 numbered items, paraphrasable seed.
       const items = chapter.nodes.filter(
         (n): n is Extract<typeof chapter.nodes[number], { type: "item" }> => n.type === "item",
       );
@@ -114,7 +152,7 @@ const Reuniao = () => {
 
       const { data, error } = await supabase.functions.invoke("gerar-roteiro", {
         body: {
-          chapterSlug: chapter.slug,
+          chapterSlug: baseChapter.slug,
           chapterTitle: chapter.title,
           chapterSummary: chapter.summary,
           excerpt,
@@ -128,21 +166,30 @@ const Reuniao = () => {
         await supabase.from("meeting_guides").upsert(
           [{
             user_id: user.id,
-            chapter_slug: chapter.slug,
+            chapter_slug: baseChapter.slug,
             guide: generated as any,
             model: (data as any).model ?? null,
           }],
           { onConflict: "user_id,chapter_slug" },
         );
       }
-      toast.success("Roteiro gerado.");
+      if (!silent) toast.success("Roteiro gerado.");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Falha ao gerar roteiro.");
+      if (!silent) toast.error(e?.message ?? "Falha ao gerar roteiro.");
     } finally {
       setGenerating(false);
     }
   };
+
+  // Auto-generate the guide once when chapter is approved and no cached guide exists.
+  useEffect(() => {
+    if (autoTried) return;
+    if (!user || !approved || guide || generating) return;
+    setAutoTried(true);
+    generateGuide(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, approved, guide, generating, autoTried, baseChapter.slug]);
 
   // Decide what text to speak / show in each step.
   const stepContent = (() => {
@@ -234,7 +281,7 @@ const Reuniao = () => {
 
         <div className="mt-3 flex flex-wrap gap-2 items-center border-t border-border/50 pt-3">
           <Button
-            onClick={generateGuide}
+            onClick={() => generateGuide(false)}
             disabled={generating || !approved}
             variant={guide ? "outline" : "hero"}
             size="sm"
@@ -442,6 +489,72 @@ const Reuniao = () => {
           </div>
         </Card>
       </div>
+
+      <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-primary">Registrar esta reunião</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Título (opcional)</Label>
+              <Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} />
+            </div>
+            <div>
+              <Label>Participantes</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder="Nome do participante"
+                  value={participantInput}
+                  onChange={(e) => setParticipantInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addParticipant();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={addParticipant}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {participants.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {participants.map((p) => (
+                    <Badge key={p} variant="outline" className="border-accent/40 gap-1 pr-1">
+                      {p}
+                      <button
+                        type="button"
+                        onClick={() => setParticipants(participants.filter((x) => x !== p))}
+                        className="hover:bg-destructive/10 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Notas pessoais</Label>
+              <Textarea
+                rows={4}
+                placeholder="O que tocou a família, pedidos, reflexões..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFinishOpen(false)}>
+              Pular
+            </Button>
+            <Button variant="hero" onClick={saveMeeting}>
+              <CheckCircle2 className="h-4 w-4" /> Salvar no histórico
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
