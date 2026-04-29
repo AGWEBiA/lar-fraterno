@@ -112,7 +112,7 @@ export const AppLayout = () => {
         className="md:hidden border-t border-border/50 bg-card/95 backdrop-blur-sm fixed bottom-0 left-0 right-0 z-40"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {navItems.map((it) => (
             <NavLink
               key={it.to}
@@ -129,6 +129,68 @@ export const AppLayout = () => {
               {it.label}
             </NavLink>
           ))}
+          <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                className="flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground min-h-[56px] justify-center transition-smooth"
+                aria-label="Mais opções"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+                Mais
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-2xl pb-[max(env(safe-area-inset-bottom),1rem)]">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              {user ? (
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                  <Link to="/historico" onClick={() => setMoreOpen(false)} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth">
+                    <History className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Histórico</span>
+                  </Link>
+                  <Link to="/grupos" onClick={() => setMoreOpen(false)} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Grupos</span>
+                  </Link>
+                  <Link to="/perfil" onClick={() => setMoreOpen(false)} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth">
+                    <User className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Perfil</span>
+                  </Link>
+                  <Link to="/instalar" onClick={() => setMoreOpen(false)} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth">
+                    <Smartphone className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Instalar app</span>
+                  </Link>
+                  {isAdminMaster && (
+                    <Link to="/revisao" onClick={() => setMoreOpen(false)} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <span className="text-xs">Revisão</span>
+                    </Link>
+                  )}
+                  {isAdminMaster && (
+                    <Link to="/admin" onClick={() => setMoreOpen(false)} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <span className="text-xs">Admin</span>
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => { setMoreOpen(false); handleSignOut(); }}
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-smooth col-span-3"
+                  >
+                    <LogOut className="h-5 w-5 text-destructive" />
+                    <span className="text-xs">Sair</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Button asChild className="w-full" variant="hero" onClick={() => setMoreOpen(false)}>
+                    <Link to="/auth">Entrar</Link>
+                  </Button>
+                </div>
+              )}
+            </SheetContent>
+          </Sheet>
         </div>
       </nav>
 
