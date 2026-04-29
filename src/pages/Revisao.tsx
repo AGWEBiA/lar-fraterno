@@ -350,6 +350,15 @@ const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, o
                 <CheckCircle2 className="h-4 w-4" /> Aprovar para uso
               </Button>
             )}
+            {!hasAudio && (
+              <Button variant="outline" size="sm" disabled={generatingAudio} onClick={handleGenerate}>
+                {generatingAudio ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando áudio…</>
+                ) : (
+                  <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
+                )}
+              </Button>
+            )}
             {chapter && (
               <span className="text-xs text-muted-foreground self-center ml-auto">
                 {chapter.paragraphs.length} parágrafos · ~
