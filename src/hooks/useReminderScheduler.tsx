@@ -139,7 +139,7 @@ export const useReminderScheduler = () => {
     let cancelled = false;
 
     const refreshPlan = async () => {
-      const [s, p, sp] = await Promise.all([
+      const [s, p, sp, tm] = await Promise.all([
         supabase.from("schedules").select("*").eq("user_id", user.id),
         supabase
           .from("notification_preferences")
@@ -152,7 +152,12 @@ export const useReminderScheduler = () => {
           .eq("user_id", user.id)
           .eq("completed", false)
           .not("scheduled_for", "is", null),
+        supabase.from("tenant_members").select("tenant_id").eq("user_id", user.id),
       ]);
+      const tenantIds = (tm.data ?? []).map((m: any) => m.tenant_id);
+      const ts = tenantIds.length
+        ? await supabase.from("tenant_schedules").select("*").in("tenant_id", tenantIds).eq("is_active", true)
+        : { data: [] as any[] };
       if (cancelled) return;
       const prefs: Prefs =
         (p.data as Prefs) ?? {
@@ -168,7 +173,7 @@ export const useReminderScheduler = () => {
         planRef.current = [];
         return;
       }
-      const fromSchedules = buildPlanned((s.data as Schedule[]) ?? [], prefs);
+      const fromSchedules = buildPlanned([...((s.data as Schedule[]) ?? []), ...((ts.data as any[]) ?? []).map((t) => ({ id: `t-${t.id}`, title: t.title || "Reunião do grupo", day_of_week: t.day_of_week, time_of_day: t.time_of_day, is_active: true }))], prefs);
 
       const now = Date.now();
       const fromSessions: PlannedReminder[] = [];
