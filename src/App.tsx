@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import Tenants from "./pages/Tenants";
 import TenantMembers from "./pages/TenantMembers";
+import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/grupos" element={<ProtectedRoute><Tenants /></ProtectedRoute>} />
               <Route path="/grupos/:id" element={<ProtectedRoute><TenantMembers /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              <Route path="/instalar" element={<Install />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
