@@ -14,6 +14,9 @@ interface Prefs {
   email_enabled: boolean;
   whatsapp_enabled: boolean;
   minutes_before: number;
+  push_before: boolean;
+  push_start: boolean;
+  push_end: boolean;
 }
 
 interface PlannedReminder {
@@ -53,7 +56,7 @@ const buildPlanned = (schedules: Schedule[], prefs: Prefs): PlannedReminder[] =>
     const before = new Date(start.getTime() - prefs.minutes_before * 60_000);
     const end = new Date(start.getTime() + SESSION_DURATION_MIN * 60_000);
 
-    if (before.getTime() > now.getTime()) {
+    if (prefs.push_before && before.getTime() > now.getTime()) {
       out.push({
         scheduleId: s.id,
         stage: "before",
@@ -62,7 +65,7 @@ const buildPlanned = (schedules: Schedule[], prefs: Prefs): PlannedReminder[] =>
         body: `Em ${prefs.minutes_before} minutos é hora do Evangelho no Lar (${dayLabels[s.day_of_week]}).`,
       });
     }
-    if (start.getTime() > now.getTime()) {
+    if (prefs.push_start && start.getTime() > now.getTime()) {
       out.push({
         scheduleId: s.id,
         stage: "start",
@@ -71,7 +74,7 @@ const buildPlanned = (schedules: Schedule[], prefs: Prefs): PlannedReminder[] =>
         body: "Vamos começar o Evangelho no Lar com serenidade.",
       });
     }
-    if (end.getTime() > now.getTime()) {
+    if (prefs.push_end && end.getTime() > now.getTime()) {
       out.push({
         scheduleId: s.id,
         stage: "end",
