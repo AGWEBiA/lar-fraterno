@@ -187,68 +187,76 @@ const Revisao = () => {
         </Card>
       )}
 
-      {/* Painel de pré-geração de áudio */}
-      <Card className="p-5 mb-6 bg-card/80 border-border/50">
-        <div className="flex items-start gap-3 flex-wrap">
-          <Sparkles className="h-5 w-5 text-accent mt-0.5" />
-          <div className="flex-1 min-w-[200px]">
-            <p className="font-serif text-lg text-primary">Áudio em alta qualidade</p>
-            <p className="text-xs text-muted-foreground">
+      {/* Painel de pré-geração de áudio - somente admin master */}
+      {isAdminMaster ? (
+        <Card className="p-5 mb-6 bg-card/80 border-border/50">
+          <div className="flex items-start gap-3 flex-wrap">
+            <Sparkles className="h-5 w-5 text-accent mt-0.5" />
+            <div className="flex-1 min-w-[200px]">
+              <p className="font-serif text-lg text-primary">Áudio em alta qualidade</p>
+              <p className="text-xs text-muted-foreground">
+                {(() => {
+                  const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
+                  const voiceName = voiceById(batchVoiceId)?.name ?? "voz padrão";
+                  return `${ready} de ${ALL_CHAPTERS.length} capítulos prontos na voz ${voiceName}. Você será avisado por notificação quando o lote terminar (mesmo se a aba estiver em segundo plano).`;
+                })()}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={batchVoiceId} onValueChange={setBatchVoiceId} disabled={batch.running}>
+                <SelectTrigger className="h-9 text-xs w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VOICES.map((v) => (
+                    <SelectItem key={v.id} value={v.id} className="text-xs">
+                      <span className="font-medium">{v.name}</span>{" "}
+                      <span className="text-muted-foreground">— {v.description}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {(() => {
                 const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
-                const voiceName = voiceById(batchVoiceId)?.name ?? "voz padrão";
-                return `${ready} de ${ALL_CHAPTERS.length} capítulos prontos na voz ${voiceName}. Você será avisado por notificação quando o lote terminar (mesmo se a aba estiver em segundo plano).`;
+                const remaining = ALL_CHAPTERS.length - ready;
+                return (
+                  <Button
+                    variant="hero"
+                    size="sm"
+                    onClick={generateAll}
+                    disabled={batch.running || remaining === 0}
+                  >
+                    {batch.running ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
+                    ) : remaining === 0 ? (
+                      <><CheckCircle2 className="h-4 w-4" /> Tudo pronto</>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Pré-gerar {remaining} restantes</>
+                    )}
+                  </Button>
+                );
               })()}
-            </p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={batchVoiceId} onValueChange={setBatchVoiceId} disabled={batch.running}>
-              <SelectTrigger className="h-9 text-xs w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VOICES.map((v) => (
-                  <SelectItem key={v.id} value={v.id} className="text-xs">
-                    <span className="font-medium">{v.name}</span>{" "}
-                    <span className="text-muted-foreground">— {v.description}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {(() => {
-              const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
-              const remaining = ALL_CHAPTERS.length - ready;
-              return (
-                <Button
-                  variant="hero"
-                  size="sm"
-                  onClick={generateAll}
-                  disabled={batch.running || remaining === 0}
-                >
-                  {batch.running ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
-                  ) : remaining === 0 ? (
-                    <><CheckCircle2 className="h-4 w-4" /> Tudo pronto</>
-                  ) : (
-                    <><Sparkles className="h-4 w-4" /> Pré-gerar {remaining} restantes</>
-                  )}
-                </Button>
-              );
-            })()}
-          </div>
-        </div>
-        {batch.running && (
-          <div className="mt-4 space-y-2">
-            <Progress value={(batch.done / batch.total) * 100} />
-            <p className="text-xs text-muted-foreground">
-              {batch.done}/{batch.total} — gerando: {batch.current ?? "…"}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              Pode demorar alguns minutos. Pode deixar a aba em segundo plano — você receberá notificação ao terminar.
-            </p>
-          </div>
-        )}
-      </Card>
+          {batch.running && (
+            <div className="mt-4 space-y-2">
+              <Progress value={(batch.done / batch.total) * 100} />
+              <p className="text-xs text-muted-foreground">
+                {batch.done}/{batch.total} — gerando: {batch.current ?? "…"}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Pode demorar alguns minutos. Pode deixar a aba em segundo plano — você receberá notificação ao terminar.
+              </p>
+            </div>
+          )}
+        </Card>
+      ) : user ? (
+        <Card className="p-4 mb-6 bg-secondary/40 border-border/50">
+          <p className="text-xs text-muted-foreground">
+            🎙️ A geração de áudios é exclusiva do administrador master (controle de custos de IA). Você pode ouvir todos os áudios já gerados disponíveis no sistema.
+          </p>
+        </Card>
+      ) : null}
 
       <div className="space-y-3">
         {audits.map((a) => (
