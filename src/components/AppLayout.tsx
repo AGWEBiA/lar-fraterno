@@ -1,6 +1,8 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, Building2, Calendar, History, Home, LogOut, ScrollText, ShieldCheck, Smartphone, Sparkles, User } from "lucide-react";
+import { useState } from "react";
+import { BookOpen, Building2, Calendar, History, Home, LogOut, MoreHorizontal, ScrollText, ShieldCheck, Smartphone, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
