@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Bookmark, BookmarkCheck, Check, Loader2, MessageSquare, Pause, Play, Sparkles, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Check, Loader2, MessageSquare, Pause, Play, Sparkles, Square, Volume2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,9 +7,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { chapterBySlug, chapters } from "@/data/chapters";
 import { VOICES, DEFAULT_VOICE_ID } from "@/data/voices";
 import { useSpeech } from "@/hooks/useSpeech";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useItemProgress } from "@/hooks/useItemProgress";
 import { useChapterAudio } from "@/hooks/useChapterAudio";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
