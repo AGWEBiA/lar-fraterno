@@ -188,30 +188,48 @@ const Revisao = () => {
           <div className="flex-1 min-w-[200px]">
             <p className="font-serif text-lg text-primary">Áudio em alta qualidade</p>
             <p className="text-xs text-muted-foreground">
-              {audioCache.size} de {ALL_CHAPTERS.length} capítulos com áudio HQ pronto.
-              Voz natural via ElevenLabs (PT-BR), salva em cache para reuso.
+              {(() => {
+                const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
+                const voiceName = voiceById(batchVoiceId)?.name ?? "voz padrão";
+                return `${ready} de ${ALL_CHAPTERS.length} capítulos prontos na voz ${voiceName}. Você será avisado por notificação quando o lote terminar (mesmo se a aba estiver em segundo plano).`;
+              })()}
             </p>
           </div>
-          <Button
-            variant="hero"
-            size="sm"
-            onClick={generateAll}
-            disabled={batch.running || audioCache.size === ALL_CHAPTERS.length}
-          >
-            {batch.running ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Gerando…
-              </>
-            ) : audioCache.size === ALL_CHAPTERS.length ? (
-              <>
-                <CheckCircle2 className="h-4 w-4" /> Tudo pronto
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> Pré-gerar áudio dos {ALL_CHAPTERS.length - audioCache.size} restantes
-              </>
-            )}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={batchVoiceId} onValueChange={setBatchVoiceId} disabled={batch.running}>
+              <SelectTrigger className="h-9 text-xs w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VOICES.map((v) => (
+                  <SelectItem key={v.id} value={v.id} className="text-xs">
+                    <span className="font-medium">{v.name}</span>{" "}
+                    <span className="text-muted-foreground">— {v.description}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(() => {
+              const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
+              const remaining = ALL_CHAPTERS.length - ready;
+              return (
+                <Button
+                  variant="hero"
+                  size="sm"
+                  onClick={generateAll}
+                  disabled={batch.running || remaining === 0}
+                >
+                  {batch.running ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
+                  ) : remaining === 0 ? (
+                    <><CheckCircle2 className="h-4 w-4" /> Tudo pronto</>
+                  ) : (
+                    <><Sparkles className="h-4 w-4" /> Pré-gerar {remaining} restantes</>
+                  )}
+                </Button>
+              );
+            })()}
+          </div>
         </div>
         {batch.running && (
           <div className="mt-4 space-y-2">
@@ -220,7 +238,7 @@ const Revisao = () => {
               {batch.done}/{batch.total} — gerando: {batch.current ?? "…"}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Pode demorar alguns minutos. Não feche esta aba.
+              Pode demorar alguns minutos. Pode deixar a aba em segundo plano — você receberá notificação ao terminar.
             </p>
           </div>
         )}
@@ -234,10 +252,10 @@ const Revisao = () => {
             approved={!!approvals[a.slug]}
             disabled={!user || loading}
             isOpen={open === a.slug}
-            hasAudio={audioCache.has(a.slug)}
+            availableVoices={audioCache.get(a.slug) ?? new Set()}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
-            onGenerateAudio={() => generateAudio(a.slug)}
+            onGenerateAudio={(voiceId) => generateAudio(a.slug, voiceId)}
           />
         ))}
       </div>
