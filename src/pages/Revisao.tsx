@@ -267,6 +267,7 @@ const Revisao = () => {
             disabled={!user || loading}
             isOpen={open === a.slug}
             availableVoices={audioCache.get(a.slug) ?? new Set()}
+            canGenerate={isAdminMaster}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
             onGenerateAudio={(voiceId, force) => generateAudio(a.slug, voiceId, force)}
