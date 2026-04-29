@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { auditAllChapters, type ChapterAudit } from "@/lib/chapter-audit";
 import { chapterBySlug, chapters as ALL_CHAPTERS } from "@/data/chapters";
+import { VOICES, DEFAULT_VOICE_ID, voiceById } from "@/data/voices";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ensureNotificationPermission, notifyDesktop } from "@/lib/notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -18,7 +21,8 @@ const Revisao = () => {
   const [approvals, setApprovals] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [audioCache, setAudioCache] = useState<Set<string>>(new Set());
+  const [audioCache, setAudioCache] = useState<Map<string, Set<string>>>(new Map());
+  const [batchVoiceId, setBatchVoiceId] = useState<string>(DEFAULT_VOICE_ID);
   const [batch, setBatch] = useState<{ running: boolean; done: number; total: number; current: string | null }>({
     running: false,
     done: 0,
@@ -47,45 +51,71 @@ const Revisao = () => {
       });
   }, [user]);
 
-  // Carrega lista de capítulos com áudio já gerado.
+  // Carrega lista de capítulos com áudio já gerado, agrupados por voz.
   useEffect(() => {
     supabase
       .from("audio_cache")
-      .select("chapter_slug")
+      .select("chapter_slug, voice_id")
       .then(({ data }) => {
-        if (data) setAudioCache(new Set(data.map((r) => r.chapter_slug)));
+        if (!data) return;
+        const map = new Map<string, Set<string>>();
+        for (const row of data) {
+          const set = map.get(row.chapter_slug) ?? new Set<string>();
+          set.add(row.voice_id);
+          map.set(row.chapter_slug, set);
+        }
+        setAudioCache(map);
       });
   }, [batch.done]);
 
-  const generateAudio = async (slug: string) => {
+  const hasAudioForVoice = (slug: string, voiceId: string) =>
+    audioCache.get(slug)?.has(voiceId) ?? false;
+
+  const generateAudio = async (slug: string, voiceId: string = batchVoiceId) => {
     const ch = chapterBySlug(slug);
     if (!ch) return false;
     const text = `${ch.title}. ${ch.paragraphs.join(" ")}`;
     const { data, error } = await supabase.functions.invoke("tts-chapter", {
-      body: { slug, text },
+      body: { slug, text, voiceId },
     });
     if (error || data?.error) {
       toast.error(`Falha em ${ch.title}: ${data?.error ?? error?.message ?? "erro"}`);
       return false;
     }
-    setAudioCache((prev) => new Set(prev).add(slug));
+    setAudioCache((prev) => {
+      const next = new Map(prev);
+      const set = new Set(next.get(slug) ?? []);
+      set.add(voiceId);
+      next.set(slug, set);
+      return next;
+    });
     return true;
   };
 
   const generateAll = async () => {
-    const pending = ALL_CHAPTERS.filter((c) => !audioCache.has(c.slug));
+    const pending = ALL_CHAPTERS.filter((c) => !hasAudioForVoice(c.slug, batchVoiceId));
     if (pending.length === 0) {
-      toast.success("Todos os capítulos já têm áudio gerado!");
+      toast.success("Todos os capítulos já têm áudio gerado nesta voz!");
       return;
     }
+    await ensureNotificationPermission();
+    const voiceName = voiceById(batchVoiceId)?.name ?? "voz padrão";
     setBatch({ running: true, done: 0, total: pending.length, current: null });
+    let okCount = 0;
+    let failCount = 0;
     for (let i = 0; i < pending.length; i++) {
       const ch = pending[i];
       setBatch((b) => ({ ...b, current: ch.title, done: i }));
-      await generateAudio(ch.slug);
+      const ok = await generateAudio(ch.slug, batchVoiceId);
+      if (ok) okCount++;
+      else failCount++;
     }
     setBatch({ running: false, done: pending.length, total: pending.length, current: null });
-    toast.success("Pré-geração concluída!");
+    const summary = failCount > 0
+      ? `${okCount} ok · ${failCount} falharam (voz ${voiceName})`
+      : `${okCount} capítulos gerados na voz ${voiceName}`;
+    toast.success("Pré-geração concluída!", { description: summary });
+    notifyDesktop("Pré-geração de áudio concluída", summary);
   };
 
   const toggleApproval = async (slug: string, approved: boolean) => {
@@ -158,30 +188,48 @@ const Revisao = () => {
           <div className="flex-1 min-w-[200px]">
             <p className="font-serif text-lg text-primary">Áudio em alta qualidade</p>
             <p className="text-xs text-muted-foreground">
-              {audioCache.size} de {ALL_CHAPTERS.length} capítulos com áudio HQ pronto.
-              Voz natural via ElevenLabs (PT-BR), salva em cache para reuso.
+              {(() => {
+                const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
+                const voiceName = voiceById(batchVoiceId)?.name ?? "voz padrão";
+                return `${ready} de ${ALL_CHAPTERS.length} capítulos prontos na voz ${voiceName}. Você será avisado por notificação quando o lote terminar (mesmo se a aba estiver em segundo plano).`;
+              })()}
             </p>
           </div>
-          <Button
-            variant="hero"
-            size="sm"
-            onClick={generateAll}
-            disabled={batch.running || audioCache.size === ALL_CHAPTERS.length}
-          >
-            {batch.running ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Gerando…
-              </>
-            ) : audioCache.size === ALL_CHAPTERS.length ? (
-              <>
-                <CheckCircle2 className="h-4 w-4" /> Tudo pronto
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> Pré-gerar áudio dos {ALL_CHAPTERS.length - audioCache.size} restantes
-              </>
-            )}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={batchVoiceId} onValueChange={setBatchVoiceId} disabled={batch.running}>
+              <SelectTrigger className="h-9 text-xs w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VOICES.map((v) => (
+                  <SelectItem key={v.id} value={v.id} className="text-xs">
+                    <span className="font-medium">{v.name}</span>{" "}
+                    <span className="text-muted-foreground">— {v.description}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(() => {
+              const ready = ALL_CHAPTERS.filter((c) => hasAudioForVoice(c.slug, batchVoiceId)).length;
+              const remaining = ALL_CHAPTERS.length - ready;
+              return (
+                <Button
+                  variant="hero"
+                  size="sm"
+                  onClick={generateAll}
+                  disabled={batch.running || remaining === 0}
+                >
+                  {batch.running ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
+                  ) : remaining === 0 ? (
+                    <><CheckCircle2 className="h-4 w-4" /> Tudo pronto</>
+                  ) : (
+                    <><Sparkles className="h-4 w-4" /> Pré-gerar {remaining} restantes</>
+                  )}
+                </Button>
+              );
+            })()}
+          </div>
         </div>
         {batch.running && (
           <div className="mt-4 space-y-2">
@@ -190,7 +238,7 @@ const Revisao = () => {
               {batch.done}/{batch.total} — gerando: {batch.current ?? "…"}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Pode demorar alguns minutos. Não feche esta aba.
+              Pode demorar alguns minutos. Pode deixar a aba em segundo plano — você receberá notificação ao terminar.
             </p>
           </div>
         )}
@@ -204,10 +252,10 @@ const Revisao = () => {
             approved={!!approvals[a.slug]}
             disabled={!user || loading}
             isOpen={open === a.slug}
-            hasAudio={audioCache.has(a.slug)}
+            availableVoices={audioCache.get(a.slug) ?? new Set()}
             onToggleOpen={() => setOpen(open === a.slug ? null : a.slug)}
             onApprove={(v) => toggleApproval(a.slug, v)}
-            onGenerateAudio={() => generateAudio(a.slug)}
+            onGenerateAudio={(voiceId) => generateAudio(a.slug, voiceId)}
           />
         ))}
       </div>
@@ -220,19 +268,26 @@ interface RowProps {
   approved: boolean;
   disabled: boolean;
   isOpen: boolean;
-  hasAudio: boolean;
+  availableVoices: Set<string>;
   onToggleOpen: () => void;
   onApprove: (v: boolean) => void;
-  onGenerateAudio: () => Promise<boolean> | void;
+  onGenerateAudio: (voiceId: string) => Promise<boolean> | void;
 }
 
-const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
+const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggleOpen, onApprove, onGenerateAudio }: RowProps) => {
   const chapter = chapterBySlug(audit.slug);
   const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [rowVoiceId, setRowVoiceId] = useState<string>(DEFAULT_VOICE_ID);
+  const hasAudio = availableVoices.size > 0;
+  const hasAudioForRowVoice = availableVoices.has(rowVoiceId);
 
   const handleGenerate = async () => {
     setGeneratingAudio(true);
-    await onGenerateAudio();
+    await ensureNotificationPermission();
+    await onGenerateAudio(rowVoiceId);
+    const voiceName = voiceById(rowVoiceId)?.name ?? "voz padrão";
+    toast.success(`Áudio HQ pronto: ${audit.title}`, { description: `Voz ${voiceName}` });
+    notifyDesktop("Áudio HQ pronto", `${audit.title} — voz ${voiceName}`);
     setGeneratingAudio(false);
   };
 
@@ -279,6 +334,7 @@ const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, o
             {hasAudio && (
               <Badge variant="outline" className="border-accent/40 text-accent">
                 <Sparkles className="h-3 w-3 mr-1" /> Áudio HQ
+                {availableVoices.size > 1 && ` · ${availableVoices.size} vozes`}
               </Badge>
             )}
           </div>
@@ -350,15 +406,38 @@ const AuditRow = ({ audit, approved, disabled, isOpen, hasAudio, onToggleOpen, o
                 <CheckCircle2 className="h-4 w-4" /> Aprovar para uso
               </Button>
             )}
-            {!hasAudio && (
-              <Button variant="outline" size="sm" disabled={generatingAudio} onClick={handleGenerate}>
+            <div className="flex items-center gap-2">
+              <Select value={rowVoiceId} onValueChange={setRowVoiceId} disabled={generatingAudio}>
+                <SelectTrigger className="h-9 text-xs w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VOICES.map((v) => (
+                    <SelectItem key={v.id} value={v.id} className="text-xs">
+                      <span className="font-medium">{v.name}</span>{" "}
+                      {availableVoices.has(v.id) && (
+                        <span className="text-accent">✓</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={generatingAudio || hasAudioForRowVoice}
+                onClick={handleGenerate}
+                title={hasAudioForRowVoice ? "Já existe áudio gerado nesta voz" : "Gerar áudio nesta voz"}
+              >
                 {generatingAudio ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando áudio…</>
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</>
+                ) : hasAudioForRowVoice ? (
+                  <><CheckCircle2 className="h-4 w-4" /> Pronto</>
                 ) : (
                   <><Sparkles className="h-4 w-4" /> Gerar áudio HQ</>
                 )}
               </Button>
-            )}
+            </div>
             {chapter && (
               <span className="text-xs text-muted-foreground self-center ml-auto">
                 {chapter.paragraphs.length} parágrafos · ~

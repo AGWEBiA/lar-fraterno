@@ -5,12 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { chapterBySlug, chapters } from "@/data/chapters";
+import { VOICES, DEFAULT_VOICE_ID } from "@/data/voices";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useItemProgress } from "@/hooks/useItemProgress";
 import { useChapterAudio } from "@/hooks/useChapterAudio";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ensureNotificationPermission } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -20,9 +23,16 @@ const Leitor = () => {
   const tts = useSpeech();
   const chapter = slug ? chapterBySlug(slug) : null;
   const { rows, toggleRead, toggleBookmark, setNote } = useItemProgress(chapter?.slug);
-  const audio = useChapterAudio(chapter);
+  const [voiceId, setVoiceId] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("ttsVoiceId") || DEFAULT_VOICE_ID : DEFAULT_VOICE_ID,
+  );
+  const audio = useChapterAudio(chapter, voiceId);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [draftNote, setDraftNote] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    localStorage.setItem("ttsVoiceId", voiceId);
+  }, [voiceId]);
 
   // Para qualquer áudio (TTS do navegador + player HQ) ao trocar de capítulo
   // ou ao desmontar a página.
@@ -84,6 +94,26 @@ const Leitor = () => {
         <p className="text-lg text-muted-foreground italic mb-8">{chapter.summary}</p>
 
         <Card className="p-3 mb-8 flex flex-col gap-2 bg-card/80 border-border/50 shadow-soft sticky top-20 z-30">
+          {/* Seletor de voz */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">
+              Voz
+            </span>
+            <Select value={voiceId} onValueChange={setVoiceId}>
+              <SelectTrigger className="h-8 text-xs flex-1 max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VOICES.map((v) => (
+                  <SelectItem key={v.id} value={v.id} className="text-xs">
+                    <span className="font-medium">{v.name}</span>{" "}
+                    <span className="text-muted-foreground">— {v.description}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Áudio em alta qualidade (ElevenLabs) */}
           {audio.url ? (
             <div className="flex items-center gap-2 w-full">
@@ -97,10 +127,15 @@ const Leitor = () => {
             </div>
           ) : (
             <Button
-              onClick={() => {
-                audio.generate();
+              onClick={async () => {
+                await ensureNotificationPermission();
+                audio.generate().then(() => {
+                  toast.success("Áudio HQ pronto!", {
+                    description: "Já pode tocar abaixo.",
+                  });
+                });
                 toast.info("Gerando áudio em alta qualidade…", {
-                  description: "Pode levar até 1 minuto na primeira vez. Depois fica salvo.",
+                  description: "Pode levar até 1 minuto. Você será avisado ao terminar.",
                 });
               }}
               variant="hero"
