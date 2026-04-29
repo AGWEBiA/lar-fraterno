@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
   Circle,
-  Loader2,
   Pause,
   Play,
   Plus,
@@ -25,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { meetingSteps } from "@/data/meeting-steps";
 import { chapters } from "@/data/chapters";
+import { buildGuide } from "@/data/meeting-guide-template";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useChapterEdits } from "@/hooks/useChapterOverrides";
 import { cn } from "@/lib/utils";
@@ -33,15 +33,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChapterApprovals } from "@/hooks/useChapterApprovals";
 import { toast } from "sonner";
 
-interface MeetingGuide {
-  opening_prayer: string;
-  reading_intro: string;
-  commentary_points: { title: string; text: string }[];
-  reflection_questions: string[];
-  vibrations_focus: string;
-  closing_prayer: string;
-}
-
 const Reuniao = () => {
   const { user } = useAuth();
   const { isApproved, loading: approvalsLoading } = useChapterApprovals();
@@ -49,9 +40,6 @@ const Reuniao = () => {
   const [done, setDone] = useState<Set<string>>(new Set());
   const [chapterIdx, setChapterIdx] = useState(0);
   const tts = useSpeech();
-  const [guide, setGuide] = useState<MeetingGuide | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [autoTried, setAutoTried] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [participants, setParticipants] = useState<string[]>([]);
   const [participantInput, setParticipantInput] = useState("");
@@ -66,21 +54,11 @@ const Reuniao = () => {
   const progress = (done.size / meetingSteps.length) * 100;
   const step = meetingSteps[current];
 
-  // Reset cached guide when chapter changes; load from DB if exists.
-  useEffect(() => {
-    setGuide(null);
-    setAutoTried(false);
-    if (!user) return;
-    supabase
-      .from("meeting_guides")
-      .select("guide")
-      .eq("user_id", user.id)
-      .eq("chapter_slug", baseChapter.slug)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.guide) setGuide(data.guide as unknown as MeetingGuide);
-      });
-  }, [baseChapter.slug, user]);
+  // Roteiro fixo baseado em template + dados do capítulo (sem IA).
+  const guide = useMemo(
+    () => buildGuide({ title: chapter.title, summary: chapter.summary }),
+    [chapter.title, chapter.summary],
+  );
 
   const markDone = (id: string) => setDone((s) => new Set(s).add(id));
 
