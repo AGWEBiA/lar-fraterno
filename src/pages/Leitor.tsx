@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { chapterBySlug, chapters } from "@/data/chapters";
 import { VOICES, DEFAULT_VOICE_ID } from "@/data/voices";
 import { useSpeech } from "@/hooks/useSpeech";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
