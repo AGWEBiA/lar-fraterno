@@ -12,11 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ensureNotificationPermission, notifyDesktop } from "@/lib/notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const Revisao = () => {
   const { user } = useAuth();
+  const { isAdminMaster } = useUserRole();
   const audits = useMemo(() => auditAllChapters(), []);
   const [approvals, setApprovals] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<string | null>(null);
