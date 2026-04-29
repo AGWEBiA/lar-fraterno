@@ -129,7 +129,9 @@ const Reuniao = () => {
                   className="text-sm bg-background border border-border rounded-md px-2 py-1"
                 >
                   {chapters.map((c, i) => (
-                    <option key={c.slug} value={i}>{c.title}</option>
+                    <option key={c.slug} value={i}>
+                      {c.roman ? `${c.roman} — ${c.title}` : c.title}
+                    </option>
                   ))}
                 </select>
               </div>
