@@ -20,12 +20,22 @@ interface Schedule {
 }
 interface Prefs {
   push_enabled: boolean; email_enabled: boolean; whatsapp_enabled: boolean; minutes_before: number;
+  push_before: boolean; push_start: boolean; push_end: boolean;
+  email_before: boolean; email_start: boolean; email_end: boolean;
+  whatsapp_before: boolean; whatsapp_start: boolean; whatsapp_end: boolean;
 }
+
+const DEFAULT_PREFS: Prefs = {
+  push_enabled: true, email_enabled: true, whatsapp_enabled: false, minutes_before: 15,
+  push_before: true, push_start: true, push_end: false,
+  email_before: true, email_start: false, email_end: false,
+  whatsapp_before: true, whatsapp_start: false, whatsapp_end: false,
+};
 
 const Agenda = () => {
   const { user } = useAuth();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [prefs, setPrefs] = useState<Prefs>({ push_enabled: true, email_enabled: true, whatsapp_enabled: false, minutes_before: 15 });
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [phone, setPhone] = useState("");
   const [day, setDay] = useState("3");
   const [time, setTime] = useState("20:00");
@@ -39,7 +49,7 @@ const Agenda = () => {
       supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle(),
     ]);
     setSchedules((s.data as Schedule[]) ?? []);
-    if (p.data) setPrefs(p.data as Prefs);
+    if (p.data) setPrefs({ ...DEFAULT_PREFS, ...(p.data as Partial<Prefs>) });
     if (pr.data?.phone) setPhone(pr.data.phone);
     setLoading(false);
   };
