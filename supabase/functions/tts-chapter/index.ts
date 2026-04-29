@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const VOICE_DEFAULT = "EXAVITQu4vr4xnSDxMaL"; // Sarah (PT-BR friendly)
 const MODEL_ID = "eleven_multilingual_v2";
-const MAX_CHARS = 4500; // por requisição (ElevenLabs limite ~5000)
+const MAX_CHARS = 4800; // por requisição (ElevenLabs limite ~5000)
 
 interface Body {
   slug: string;
