@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
-import { Bell, Calendar as CalendarIcon, Clock, Plus, Trash2 } from "lucide-react";
+import { Bell, Calendar as CalendarIcon, CalendarRange, Clock, ListChecks, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSessionPlan, type SessionPlanRow } from "@/hooks/useSessionPlan";
+import { chapters } from "@/data/chapters";
+import { isLongChapter, suggestSessions } from "@/data/session-planner";
 import { toast } from "sonner";
 
 const DAYS = [
@@ -23,6 +28,8 @@ interface Prefs {
   push_before: boolean; push_start: boolean; push_end: boolean;
   email_before: boolean; email_start: boolean; email_end: boolean;
   whatsapp_before: boolean; whatsapp_start: boolean; whatsapp_end: boolean;
+  schedule_mode: "manual" | "automatic";
+  reading_method: "sequential" | "random";
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -30,6 +37,18 @@ const DEFAULT_PREFS: Prefs = {
   push_before: true, push_start: true, push_end: false,
   email_before: true, email_start: false, email_end: false,
   whatsapp_before: true, whatsapp_start: false, whatsapp_end: false,
+  schedule_mode: "manual",
+  reading_method: "sequential",
+};
+
+/** Próxima ocorrência do dia/horário a partir de "from". */
+const nextOccurrence = (from: Date, dayOfWeek: number, time: string) => {
+  const [hh, mm] = time.split(":").map(Number);
+  const d = new Date(from);
+  d.setHours(hh, mm, 0, 0);
+  const diff = (dayOfWeek - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + (diff === 0 && d <= from ? 7 : diff));
+  return d;
 };
 
 const Agenda = () => {
