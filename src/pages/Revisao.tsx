@@ -285,13 +285,14 @@ const AuditRow = ({ audit, approved, disabled, isOpen, availableVoices, onToggle
   const hasAudio = availableVoices.size > 0;
   const hasAudioForRowVoice = availableVoices.has(rowVoiceId);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (force = false) => {
     setGeneratingAudio(true);
     await ensureNotificationPermission();
-    await onGenerateAudio(rowVoiceId);
+    await onGenerateAudio(rowVoiceId, force);
     const voiceName = voiceById(rowVoiceId)?.name ?? "voz padrão";
-    toast.success(`Áudio HQ pronto: ${audit.title}`, { description: `Voz ${voiceName}` });
-    notifyDesktop("Áudio HQ pronto", `${audit.title} — voz ${voiceName}`);
+    const label = force ? "Áudio HQ regerado" : "Áudio HQ pronto";
+    toast.success(`${label}: ${audit.title}`, { description: `Voz ${voiceName}` });
+    notifyDesktop(label, `${audit.title} — voz ${voiceName}`);
     setGeneratingAudio(false);
   };
 
