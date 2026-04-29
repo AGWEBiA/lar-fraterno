@@ -214,6 +214,9 @@ const AuditRow = ({ audit, approved, disabled, isOpen, onToggleOpen, onApprove }
           )}
 
           <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
+            <Button asChild variant="gold" size="sm">
+              <Link to={`/revisao/${audit.slug}`}>Editar texto e numeração</Link>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to={`/biblioteca/${audit.slug}`}>Abrir capítulo</Link>
             </Button>
